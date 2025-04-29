@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyRadio - Sistema de Rádio Interna</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #3f51b5 0%, #673ab7 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+    }
+    .card {
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+    .card-header {
+      background-color: #3f51b5;
+      color: white;
+      font-weight: bold;
+      padding: 1.5rem;
+      border-bottom: none;
+      text-align: center;
+    }
+    .card-body {
+      padding: 2rem;
+    }
+    .btn-lg {
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin: 0.5rem;
+      transition: all 0.3s ease;
+    }
+    .btn-primary {
+      background-color: #3f51b5;
+      border-color: #3f51b5;
+    }
+    .btn-primary:hover {
+      background-color: #303f9f;
+      border-color: #303f9f;
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(63, 81, 181, 0.4);
+    }
+    .btn-outline-primary {
+      color: #3f51b5;
+      border-color: #3f51b5;
+    }
+    .btn-outline-primary:hover {
+      background-color: #3f51b5;
+      color: white;
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(63, 81, 181, 0.4);
+    }
+    .icon-large {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: #3f51b5;
+    }
+    .features {
+      margin-top: 3rem;
+      text-align: center;
+    }
+    .feature-item {
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    .feature-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <h1><i class="fas fa-broadcast-tower me-2"></i> MyRadio</h1>
+        <p class="mb-0">Sistema de Rádio Interna Personalizada</p>
+      </div>
+      <div class="card-body text-center">
+        <p class="lead mb-4">Crie sua própria rádio interna com programação personalizada, spots promocionais e muito mais!</p>
+        
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+          <a href="/client" class="btn btn-primary btn-lg">
+            <i class="fas fa-headphones me-2"></i> Acessar Player
+          </a>
+          <a href="/admin" class="btn btn-outline-primary btn-lg">
+            <i class="fas fa-cog me-2"></i> Painel Administrativo
+          </a>
+        </div>
+
+        <div class="features">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="feature-item">
+                <i class="fas fa-music icon-large"></i>
+                <h4>Música</h4>
+                <p>Upload de suas próprias músicas ou integração com plataformas online.</p>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="feature-item">
+                <i class="fas fa-ad icon-large"></i>
+                <h4>Spots Promocionais</h4>
+                <p>Divulgue suas promoções em intervalos pré-definidos.</p>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="feature-item">
+                <i class="fas fa-sliders-h icon-large"></i>
+                <h4>Controle Total</h4>
+                <p>Configure volumes, intervalos e transições entre faixas.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
