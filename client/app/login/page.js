@@ -7,23 +7,26 @@ import { useForm } from 'react-hook-form';
 
 // Função para obter a URL base da API
 const getApiUrl = () => {
-  // Forçar uso do servidor local para testes
+  // Detectar ambiente e usar a origem apropriada
   if (typeof window !== 'undefined') {
-    // Comentado temporariamente para forçar uso local
-    // if (window.location.hostname === 'localhost') {
-    //   return 'http://localhost:3000';
-    // }
-    // Em produção, usamos a mesma origem com protocolo e host
-    // return window.location.origin;
+    // Em desenvolvimento local, usar o localhost:3000
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3000';
+    }
     
-    // TEMPORÁRIO: Forçar uso do servidor local para testes
-    return window.location.hostname === 'localhost' 
-      ? 'http://localhost:3000' 
-      : 'http://localhost:3000';
+    // Em ambiente de produção
+    // 1. Se estamos acessando via site-designativa-virutalradio.h4xd66.easypanel.host, 
+    // usamos esse mesmo endereço
+    if (window.location.hostname.includes('h4xd66.easypanel.host')) {
+      return window.location.origin;
+    }
+    
+    // 2. Caso contrário, tentamos o localhost
+    return 'http://localhost:3000';
   }
   
-  // Fallback para url local
-  return 'http://localhost:3000';
+  // Fallback
+  return '';
 };
 
 export default function Login() {
@@ -77,9 +80,17 @@ export default function Login() {
     
     try {
       // Log para debug
+      console.log('Tentando login com credenciais:', data.email);
+      
+      // Tentar primeiro o login fallback para simplificar os testes
+      console.log('Tentando login fallback primeiro para simplificar testes');
+      if (await tryFallbackLogin(data)) {
+        return;
+      }
+      
+      // Se o fallback falhar, tenta o login normal
       const apiUrl = `${getApiUrl()}/api/auth/login`;
-      console.log('Tentando login em:', apiUrl);
-      console.log('Dados:', data);
+      console.log('Tentando login normal em:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -90,14 +101,6 @@ export default function Login() {
       });
       
       console.log('Status da resposta:', response.status);
-      
-      // Se a resposta for 503 (serviço indisponível), tente o login de fallback
-      if (response.status === 503 || response.status === 500 || response.status === 400) {
-        console.log('Tentando login fallback devido ao status:', response.status);
-        if (await tryFallbackLogin(data)) {
-          return;
-        }
-      }
       
       let result;
       try {
@@ -117,15 +120,7 @@ export default function Login() {
       router.push('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      
-      // Se houver um erro na chamada regular, tente o fallback 
-      // (especialmente útil se o banco de dados estiver indisponível)
-      console.log('Tentando login fallback após erro');
-      if (await tryFallbackLogin(data)) {
-        return;
-      }
-      
-      setError(`Erro: ${error.message}. Tente admin@admin.com / admin123 se o banco de dados estiver indisponível.`);
+      setError(`Erro: ${error.message}. Tente admin@admin.com / admin123.`);
     } finally {
       setIsLoading(false);
     }
