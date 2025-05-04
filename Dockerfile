@@ -4,14 +4,14 @@ WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
 
 # Build the frontend
 WORKDIR /app/client
-RUN npm ci
+RUN npm install
 RUN npm run build
 
 # Return to main directory
