@@ -3,7 +3,6 @@ const nextConfig = {
   reactStrictMode: true,
   // Configuração para exportação estática
   distDir: '.next',
-  output: 'export', // Gera arquivos HTML estáticos
   images: {
     unoptimized: true, // Necessário para output: 'export'
   },
