@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>MyRadio - Rádio Interna</title>
   <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/2972/2972545.png">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -223,6 +226,7 @@
     let audioPlayer = new Audio();
     let isPlaying = false;
     let apiUrl = 'https://myradio.h4xd66.easypanel.host/api';
+    console.log('API URL:', apiUrl); // Adicionar log para debug
 
     // Elementos do DOM
     const loginSection = document.getElementById('loginSection');
@@ -562,6 +566,9 @@
         const email = document.getElementById('regEmail').value;
         const password = document.getElementById('regPassword').value;
         
+        console.log('Tentando registrar usuário:', { name, email });
+        console.log('URL da API:', `${apiUrl}/auth/register`);
+        
         fetch(`${apiUrl}/auth/register`, {
           method: 'POST',
           headers: {
@@ -570,12 +577,16 @@
           body: JSON.stringify({ name, email, password })
         })
         .then(response => {
+          console.log('Resposta do servidor:', response.status, response.statusText);
           if (!response.ok) {
-            throw new Error('Erro na resposta do servidor');
+            return response.json().then(err => {
+              throw new Error(err.message || 'Erro na resposta do servidor');
+            });
           }
           return response.json();
         })
         .then(data => {
+          console.log('Dados recebidos:', data);
           if (data.success) {
             localStorage.setItem('myRadioToken', data.token);
             currentUser = data.user;
@@ -588,7 +599,11 @@
         })
         .catch(error => {
           console.error('Erro no registro:', error);
-          alert('Erro ao conectar com o servidor. Por favor, tente novamente.');
+          if (error.message.includes('Failed to fetch')) {
+            alert('Não foi possível conectar ao servidor. Verifique se o servidor está rodando e tente novamente.');
+          } else {
+            alert(error.message || 'Erro ao conectar com o servidor. Por favor, tente novamente.');
+          }
         });
       });
       

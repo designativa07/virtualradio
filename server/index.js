@@ -25,17 +25,24 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "cdn-icons-png.flaticon.com"],
-      connectSrc: ["'self'", "https://myradio.h4xd66.easypanel.host"]
+      connectSrc: ["'self'", "https://myradio.h4xd66.easypanel.host", "http://localhost:5000"]
     }
   }
 }));
 app.use(compression());
 app.use(cors({
-  origin: ['https://myradio.h4xd66.easypanel.host', 'http://localhost:5000'],
+  origin: true, // Permitir todas as origens durante o desenvolvimento
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Adicionar middleware para logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
