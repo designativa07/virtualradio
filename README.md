@@ -31,4 +31,15 @@ npm run build
 
 # Start production server
 npm start
-``` 
+```
+
+# Database Configuration
+DB_HOST=108.167.132.244
+DB_USER=desig938_myradio
+DB_PASS=.%P&VK7y(9}1
+DB_NAME=desig938_myradio
+
+# Server Configuration
+PORT=80
+NODE_ENV=production
+SESSION_SECRET=virtualradioappsecretkey 
