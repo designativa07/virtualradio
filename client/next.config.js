@@ -1,20 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Desativar a verificação rígida de rotas dinâmicas durante a exportação estática
-  output: 'export',
-  distDir: 'dist',
-  images: {
-    unoptimized: true, // Obrigatório para exportação estática
-  },
-  trailingSlash: true, // Melhor para exportação estática
+  // Configuração padrão do Next.js sem exportação estática
+  distDir: '.next',
   
-  // Esta configuração contorna limitações da exportação estática para rotas dinâmicas
-  // Criar uma página 404 para capturar requisições de rotas dinâmicas
-  // O JavaScript do cliente manipulará a navegação para a página correta
-  experimental: {
-    // Permitir URLs arbitrárias em exportação estática
-    strictDynamicRoutes: false,
+  // Configure as requisições de API para apontar para o backend Express
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:3000/api/:path*'
+          : '/api/:path*', // Em produção, deixe o Express lidar com as requisições da API
+      },
+    ];
   },
 };
 
