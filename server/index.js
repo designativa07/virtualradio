@@ -97,11 +97,12 @@ async function setupServer() {
   app.post('/api/auth/login-fallback', (req, res) => {
     const { email, password } = req.body;
     
-    if (email === 'admin' && password === 'admin123') {
+    // Aceitar tanto 'admin' quanto 'admin@admin.com'
+    if ((email === 'admin' || email === 'admin@admin.com') && password === 'admin123') {
       req.session.user = {
         id: 0,
         username: 'Admin',
-        email: 'admin',
+        email: email,
         role: 'admin'
       };
       return res.json({ 
@@ -112,7 +113,7 @@ async function setupServer() {
     } else {
       return res.status(401).json({ 
         message: 'Credenciais inválidas',
-        fallbackCredentials: 'Use admin/admin123'
+        fallbackCredentials: 'Use admin@admin.com / admin123'
       });
     }
   });
@@ -141,11 +142,12 @@ async function setupServer() {
         if (req.path === '/login' && req.method === 'POST') {
           const { email, password } = req.body;
           
-          if (email === 'admin' && password === 'admin123') {
+          // Aceitar tanto 'admin' quanto 'admin@admin.com'
+          if ((email === 'admin' || email === 'admin@admin.com') && password === 'admin123') {
             req.session.user = {
               id: 0,
               username: 'Admin',
-              email: 'admin',
+              email: email,
               role: 'admin'
             };
             return res.json({ 
