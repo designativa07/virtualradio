@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Teste de Conexão - MyRadio</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    .result {
+      margin: 20px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Teste de Conexão com o Servidor MyRadio</h1>
+  
+  <div class="controls">
+    <button onclick="testConnection('https://myradio.h4xd66.easypanel.host/api')">Testar Conexão EasyPanel</button>
+    <button onclick="testConnection('http://localhost:5000/api')">Testar Conexão Local</button>
+    <button onclick="testRegistration()">Testar Registro</button>
+  </div>
+  
+  <div id="results" class="result">
+    <p>Clique em um dos botões acima para testar a conexão.</p>
+  </div>
+  
+  <script>
+    function updateResult(content, isSuccess) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = `<div class="${isSuccess ? 'success' : 'error'}">${content}</div>`;
+    }
+    
+    function showResponse(data) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    }
+    
+    function testConnection(url) {
+      updateResult(`Testando conexão com: ${url}...`, true);
+      
+      fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => {
+        updateResult(`Conexão com ${url} bem-sucedida! Status: ${response.status}`, true);
+        return response.json();
+      })
+      .then(data => {
+        showResponse(data);
+      })
+      .catch(error => {
+        updateResult(`Erro ao conectar com ${url}: ${error.message}`, false);
+        console.error('Erro de conexão:', error);
+      });
+    }
+    
+    function testRegistration() {
+      const url = 'https://myradio.h4xd66.easypanel.host/api/auth/register';
+      const testUser = {
+        name: 'Teste ' + new Date().toISOString().substring(0, 19),
+        email: 'teste_' + Date.now() + '@example.com',
+        password: 'senha123'
+      };
+      
+      updateResult(`Testando registro em: ${url} com usuário: ${testUser.email}`, true);
+      
+      fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testUser)
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => {
+            throw new Error(`Erro (${response.status}): ${err.message || 'Erro desconhecido'}`);
+          });
+        }
+        updateResult(`Registro bem-sucedido em ${url}! Status: ${response.status}`, true);
+        return response.json();
+      })
+      .then(data => {
+        showResponse(data);
+      })
+      .catch(error => {
+        updateResult(`Erro ao registrar em ${url}: ${error.message}`, false);
+        console.error('Erro de registro:', error);
+      });
+    }
+  </script>
+</body>
+</html> 
