@@ -9,8 +9,13 @@ const nextConfig = {
   },
   trailingSlash: true, // Adiciona / no final das URLs para compatibilidade com servidor estático
   
-  // Desabilitando rewrites, pois não funcionam com exportação estática
-  // As chamadas de API serão configuradas diretamente nos componentes
+  // Desabilitando recursos do App Router que não são compatíveis com exportação estática
+  experimental: {
+    appDir: true,
+    // Desativando RSC na exportação estática
+    serverActions: false,
+    serverComponents: false,
+  },
 };
 
 module.exports = nextConfig; 

@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+// Função para obter a URL base da API (mesma do login)
+const getApiUrl = () => {
+  // Em desenvolvimento, usamos localhost:3000
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3000';
+  }
+  
+  // Em produção, usamos a mesma origem
+  return '';
+};
+
 export default function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -11,9 +22,14 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   useEffect(() => {
+    // Desativar a verificação de autenticação em aplicações estáticas
+    // para evitar erros 401. O usuário terá que fazer login explicitamente.
+    setIsLoading(false);
+    
+    /*
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me');
+        const response = await fetch(`${getApiUrl()}/api/auth/me`);
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
@@ -26,11 +42,12 @@ export default function Navbar() {
     };
     
     checkAuth();
+    */
   }, []);
   
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/logout', {
+      const response = await fetch(`${getApiUrl()}/api/auth/logout`, {
         method: 'POST',
       });
       
