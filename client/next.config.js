@@ -1,20 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Configuração padrão do Next.js sem exportação estática
+  // Configuração para exportação estática
   distDir: '.next',
-  
-  // Configure as requisições de API para apontar para o backend Express
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: process.env.NODE_ENV === 'development' 
-          ? 'http://localhost:3000/api/:path*'
-          : '/api/:path*', // Em produção, deixe o Express lidar com as requisições da API
-      },
-    ];
+  output: 'export', // Gera arquivos HTML estáticos
+  images: {
+    unoptimized: true, // Necessário para output: 'export'
   },
+  trailingSlash: true, // Adiciona / no final das URLs para compatibilidade com servidor estático
+  
+  // Desabilitando rewrites, pois não funcionam com exportação estática
+  // As chamadas de API serão configuradas diretamente nos componentes
 };
 
 module.exports = nextConfig; 

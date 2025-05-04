@@ -166,10 +166,46 @@ async function setupServer() {
     if (process.env.NODE_ENV === 'production') {
       // Caminho para os arquivos do Next.js
       const nextPath = path.join(__dirname, '../client/.next');
+      const nextOutPath = path.join(__dirname, '../client/out');
       const publicPath = path.join(__dirname, '../client/public');
       
-      // Verificar se a pasta .next existe (build normal do Next.js)
-      if (fs.existsSync(nextPath)) {
+      // Primeiro verificamos se existe a pasta 'out', que é gerada pelo modo export
+      if (fs.existsSync(nextOutPath)) {
+        console.log('Servindo arquivos estáticos do Next.js da pasta out (modo export)');
+        
+        // Servir todos os arquivos estáticos da pasta out
+        app.use(express.static(nextOutPath));
+        
+        // Servir arquivos da pasta public caso exista
+        if (fs.existsSync(publicPath)) {
+          app.use(express.static(publicPath));
+        }
+        
+        // Para qualquer rota que não seja API, servir o index.html
+        app.get('*', (req, res, next) => {
+          // Pular rotas de API
+          if (req.path.startsWith('/api/')) {
+            return next();
+          }
+          
+          // Servir o HTML correspondente ou o index.html como fallback
+          const filePath = req.path.endsWith('/') 
+            ? path.join(nextOutPath, req.path, 'index.html')
+            : path.join(nextOutPath, `${req.path}.html`);
+          
+          // Verificar se o arquivo existe
+          if (fs.existsSync(filePath)) {
+            return res.sendFile(filePath);
+          }
+          
+          // Fallback para index.html
+          return res.sendFile(path.join(nextOutPath, 'index.html'));
+        });
+        
+        console.log('Configuração para servir arquivos estáticos (modo export) concluída');
+      } 
+      // Verificar se existe a pasta .next como fallback
+      else if (fs.existsSync(nextPath)) {
         console.log('Servindo arquivos estáticos do Next.js da pasta .next');
         
         // Servir arquivos estáticos do Next.js

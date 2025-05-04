@@ -1,9 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
+
+// Função para obter a URL base da API
+const getApiUrl = () => {
+  // Em desenvolvimento, usamos localhost:3000
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3000';
+  }
+  
+  // Em produção, usamos a mesma origem
+  return '';
+};
 
 export default function Login() {
   const router = useRouter();
@@ -12,18 +23,50 @@ export default function Login() {
   
   const { register, handleSubmit, formState: { errors } } = useForm();
   
-  const onSubmit = async (data) => {
-    setIsLoading(true);
-    setError('');
-    
+  // Tentar autenticar com as credenciais padrão se houver problemas de banco de dados
+  const tryFallbackLogin = async (data) => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${getApiUrl()}/api/auth/login-fallback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Fallback login successful:', result);
+        router.push('/dashboard');
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Fallback login error:', error);
+      return false;
+    }
+  };
+  
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const response = await fetch(`${getApiUrl()}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      // Se a resposta for 503 (serviço indisponível), tente o login de fallback
+      if (response.status === 503 || response.status === 500) {
+        if (await tryFallbackLogin(data)) {
+          return;
+        }
+      }
       
       const result = await response.json();
       
@@ -35,8 +78,15 @@ export default function Login() {
       // Redirect to dashboard on successful login
       router.push('/dashboard');
     } catch (error) {
-      setError('An error occurred. Please try again.');
       console.error('Login error:', error);
+      
+      // Se houver um erro na chamada regular, tente o fallback 
+      // (especialmente útil se o banco de dados estiver indisponível)
+      if (await tryFallbackLogin(data)) {
+        return;
+      }
+      
+      setError('An error occurred. Please try again. You can try using admin/admin123 if database is unavailable.');
     } finally {
       setIsLoading(false);
     }
@@ -100,6 +150,10 @@ export default function Login() {
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+        
+        <div className="mt-4 text-center text-sm">
+          <p>Default credentials: admin / admin123</p>
+        </div>
         
         <div className="mt-6 text-center">
           <Link href="/" className="text-primary hover:underline">

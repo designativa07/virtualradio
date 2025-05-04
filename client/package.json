@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "export": "next export || echo 'Export command not needed in Next.js 13.3+' && cp -r .next/static ./out/",
     "start": "next start",
     "lint": "next lint"
   },
