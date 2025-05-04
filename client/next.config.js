@@ -1,25 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Conditionally apply configurations based on environment
-  ...(process.env.NODE_ENV === 'development' 
-    ? {
-        // Only use rewrites in development
-        async rewrites() {
-          return [
-            {
-              source: '/api/:path*',
-              destination: 'http://localhost:3000/api/:path*', // Proxy API requests to Express server in development
-            },
-          ];
-        }
-      } 
-    : {
-        // Use export in production
-        output: 'export',
-        distDir: 'dist', // Use dist instead of .next
-      }
-  )
+  // Define API rewrites to proxy API requests to backend
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:3000/api/:path*'
+          : 'http://localhost:3000/api/:path*', // In production this will be handled by our server
+      },
+    ];
+  },
+  // Use Next.js default output mode (not 'export')
+  distDir: 'dist', // Still use dist instead of .next
 };
 
 module.exports = nextConfig; 
