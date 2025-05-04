@@ -105,9 +105,15 @@ router.post('/logout', (req, res) => {
 
 // Get current user
 router.get('/me', (req, res) => {
+  console.log('Rota /me chamada. Sessão existe?', !!req.session);
+  console.log('Conteúdo da sessão:', req.session);
+  
   if (!req.session.user) {
+    console.log('Usuário não autenticado na sessão');
     return res.status(401).json({ message: 'Not authenticated' });
   }
+  
+  console.log('Usuário autenticado:', req.session.user);
   res.json({ user: req.session.user });
 });
 

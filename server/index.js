@@ -49,7 +49,10 @@ async function setupServer() {
   const app = express();
 
   // Middleware
-  app.use(cors());
+  app.use(cors({
+    origin: ['http://localhost:3000', 'https://site-designativa-virutalradio.h4xd66.easypanel.host'],
+    credentials: true  // Importante: Permite envio de cookies em requisições CORS
+  }));
   app.use(express.json());
   app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
@@ -63,7 +66,11 @@ async function setupServer() {
     secret: process.env.SESSION_SECRET || 'session_secret',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
+    cookie: { 
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',  // Permite cookies entre domínios diferentes
+      maxAge: 1000 * 60 * 60 * 24 // 24 horas
+    }
   }));
 
   // Ensure uploads directory exists
@@ -97,17 +104,26 @@ async function setupServer() {
   app.post('/api/auth/login-fallback', (req, res) => {
     const { email, password } = req.body;
     
+    console.log('Login fallback tentado com:', { email });
+    
     // Aceitar tanto 'admin' quanto 'admin@admin.com'
-    if ((email === 'admin' || email === 'admin@admin.com') && password === 'admin123') {
-      req.session.user = {
+    if ((email === 'admin' || email === 'admin@admin.com' || email === 'admin@virtualradio.com') && password === 'admin123') {
+      const user = {
         id: 0,
         username: 'Admin',
         email: email,
         role: 'admin'
       };
+      
+      req.session.user = user;
+      
+      // Log de depuração
+      console.log('Login fallback bem-sucedido:', { user });
+      console.log('Sessão:', req.session);
+      
       return res.json({ 
         message: 'Login bem-sucedido (modo fallback)',
-        user: req.session.user,
+        user: user,
         mode: 'fallback'
       });
     } else {
