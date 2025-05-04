@@ -1,0 +1,157 @@
+const express = require('express');
+const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const db = require('../config/database');
+
+// Middleware
+const isAuthenticated = (req, res, next) => {
+  if (!req.session.user) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  next();
+};
+
+const isRadioAdmin = async (req, res, next) => {
+  if (!req.session.user) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  
+  // System admin has access to all radios
+  if (req.session.user.role === 'system_admin') {
+    return next();
+  }
+  
+  // Get radio ID from request
+  let radioId = req.params.radioId || req.body.radioId;
+  
+  if (!radioId) {
+    return res.status(400).json({ message: 'Radio ID is required' });
+  }
+  
+  try {
+    // Check if user is the radio admin
+    const [radios] = await db.query(
+      'SELECT * FROM radios WHERE id = ? AND admin_id = ?',
+      [radioId, req.session.user.id]
+    );
+    
+    if (radios.length === 0) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Error checking radio admin:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get all audio files for a radio
+router.get('/radio/:radioId', isAuthenticated, async (req, res) => {
+  const radioId = req.params.radioId;
+  
+  try {
+    const [files] = await db.query(
+      'SELECT * FROM audio_files WHERE radio_id = ? ORDER BY created_at DESC',
+      [radioId]
+    );
+    
+    res.json({ files });
+  } catch (error) {
+    console.error('Error fetching audio files:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Upload new audio file
+router.post('/upload', isAuthenticated, isRadioAdmin, async (req, res) => {
+  if (!req.files || !req.files.audio) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+  
+  const { audio } = req.files;
+  const { title, type, radioId } = req.body;
+  
+  if (!title || !type || !radioId) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+  
+  // Validate file type
+  if (!audio.name.match(/\.(mp3|wav|ogg)$/)) {
+    return res.status(400).json({ message: 'Unsupported file format' });
+  }
+  
+  try {
+    // Create directory for radio if it doesn't exist
+    const uploadDir = path.join(__dirname, '../../uploads', radioId.toString());
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    // Save file
+    const fileName = `${Date.now()}_${audio.name.replace(/\s+/g, '_')}`;
+    const filePath = path.join(uploadDir, fileName);
+    
+    await audio.mv(filePath);
+    
+    // Save to database
+    const [result] = await db.query(
+      'INSERT INTO audio_files (radio_id, title, type, file_path) VALUES (?, ?, ?, ?)',
+      [radioId, title, type, `uploads/${radioId}/${fileName}`]
+    );
+    
+    res.status(201).json({
+      message: 'File uploaded successfully',
+      fileId: result.insertId,
+      filePath: `uploads/${radioId}/${fileName}`
+    });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ message: 'Error uploading file' });
+  }
+});
+
+// Delete audio file
+router.delete('/:id', isAuthenticated, async (req, res) => {
+  const fileId = req.params.id;
+  
+  try {
+    // Get file details
+    const [files] = await db.query('SELECT * FROM audio_files WHERE id = ?', [fileId]);
+    
+    if (files.length === 0) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+    
+    const file = files[0];
+    
+    // Check permissions (only radio admin or system admin can delete)
+    if (req.session.user.role !== 'system_admin') {
+      const [radios] = await db.query(
+        'SELECT * FROM radios WHERE id = ? AND admin_id = ?',
+        [file.radio_id, req.session.user.id]
+      );
+      
+      if (radios.length === 0) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    }
+    
+    // Delete file from storage
+    const filePath = path.join(__dirname, '../../', file.file_path);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    // Delete from database
+    await db.query('DELETE FROM audio_files WHERE id = ?', [fileId]);
+    
+    res.json({ message: 'File deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+module.exports = router; 

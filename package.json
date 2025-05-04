@@ -1,0 +1,27 @@
+{
+  "name": "virtualradio",
+  "version": "1.0.0",
+  "description": "A complete web platform for creating and managing internal radio stations",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "nodemon server/index.js",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "node server/index.js",
+    "db:init": "node scripts/init-db.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-fileupload": "^1.4.0",
+    "express-session": "^1.17.3",
+    "mysql2": "^3.6.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.0.1"
+  }
+} 
