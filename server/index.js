@@ -164,16 +164,52 @@ async function setupServer() {
 
     // Servir o Next.js em modo SSR em produção
     if (process.env.NODE_ENV === 'production') {
-      const next = require('next');
-      const dev = false;
-      const nextApp = next({ dev, dir: path.join(__dirname, '../client') });
-      const handle = nextApp.getRequestHandler();
-      console.log('Inicializando Next.js para SSR...');
-      await nextApp.prepare();
-      app.all('*', (req, res) => {
-        return handle(req, res);
-      });
-      console.log('Next.js integrado com sucesso (SSR)');
+      try {
+        const next = require('next');
+        const dev = false;
+        const clientDir = path.join(__dirname, '../client');
+        
+        // Verificar se o diretório .next/server existe e criá-lo caso não exista
+        const serverDir = path.join(clientDir, '.next/server');
+        if (!fs.existsSync(serverDir)) {
+          fs.mkdirSync(serverDir, { recursive: true });
+          console.log('Created .next/server directory');
+        }
+        
+        // Verificar se o arquivo font-manifest.json existe e criá-lo caso não exista
+        const fontManifestPath = path.join(serverDir, 'font-manifest.json');
+        if (!fs.existsSync(fontManifestPath)) {
+          fs.writeFileSync(fontManifestPath, '[]', 'utf8');
+          console.log('Created empty font-manifest.json file');
+        }
+        
+        const nextApp = next({ dev, dir: clientDir });
+        const handle = nextApp.getRequestHandler();
+        console.log('Inicializando Next.js para SSR...');
+        await nextApp.prepare();
+        app.all('*', (req, res) => {
+          return handle(req, res);
+        });
+        console.log('Next.js integrado com sucesso (SSR)');
+      } catch (err) {
+        console.error('Erro ao inicializar Next.js:', err);
+        // Disponibilizar uma página simples para não quebrar totalmente o aplicativo
+        app.get('*', (req, res, next) => {
+          if (req.path.startsWith('/api/')) {
+            return next();
+          }
+          res.send(`
+            <html>
+              <head><title>VirtualRadio - Modo de contingência</title></head>
+              <body>
+                <h1>VirtualRadio - Modo de contingência</h1>
+                <p>O frontend está temporariamente indisponível. Por favor, tente novamente mais tarde.</p>
+                <p>API endpoints continuam disponíveis em /api/*</p>
+              </body>
+            </html>
+          `);
+        });
+      }
     } else {
       // Em desenvolvimento, apenas redirecionar para a API (o frontend será executado separadamente)
       app.get('*', (req, res, next) => {
