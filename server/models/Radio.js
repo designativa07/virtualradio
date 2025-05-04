@@ -2,28 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const User = require('./User');
 
-// Modo offline - mock do modelo Radio
-const Radio = {
-  findOne: async () => null,
-  findByPk: async () => null,
-  findAll: async () => [],
-  create: async () => ({
-    id: 1,
-    name: 'Rádio Exemplo',
-    description: 'Rádio de exemplo para o modo offline',
-    spotInterval: 180,
-    musicVolume: 70,
-    spotVolume: 100,
-    userId: 1
-  }),
-  destroy: async () => true,
-  update: async () => ([1, [{id: 1}]]),
-  belongsTo: () => {},
-  hasMany: () => {}
-};
-
-// Comentado - código original
-/*
+// Definição do modelo Radio
 const Radio = sequelize.define('Radio', {
   id: {
     type: DataTypes.INTEGER,
@@ -36,6 +15,14 @@ const Radio = sequelize.define('Radio', {
   },
   description: {
     type: DataTypes.TEXT,
+    allowNull: true
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  logo: {
+    type: DataTypes.STRING,
     allowNull: true
   },
   spotInterval: {
@@ -63,36 +50,30 @@ const Radio = sequelize.define('Radio', {
     }
   },
   fadeInDuration: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 3, // 3 segundos
+    type: DataTypes.FLOAT,
+    allowNull: true,
+    defaultValue: 2.0,
     comment: 'Duração do fade in em segundos'
   },
   fadeOutDuration: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 3, // 3 segundos
+    type: DataTypes.FLOAT,
+    allowNull: true,
+    defaultValue: 2.0,
     comment: 'Duração do fade out em segundos'
   },
-  volumeTransitionDuration: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 2, // 2 segundos
-    comment: 'Duração da transição de volume em segundos'
+  config: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: {}
   },
   userId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: User,
-      key: 'id'
-    }
+    allowNull: false
   }
 });
 
 // Definir relação com usuário
 Radio.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Radio, { foreignKey: 'userId' });
-*/
 
 module.exports = Radio; 

@@ -2,27 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const Radio = require('./Radio');
 
-// Modo offline - mock do modelo Music
-const Music = {
-  findOne: async () => null,
-  findByPk: async () => null,
-  findAll: async () => [],
-  create: async (data) => ({
-    id: 1,
-    title: data?.title || 'Música Exemplo',
-    artist: data?.artist || 'Artista Exemplo',
-    filePath: data?.filePath || '/uploads/music/exemplo.mp3',
-    duration: 180,
-    radioId: 1
-  }),
-  destroy: async () => true,
-  update: async () => ([1, [{id: 1}]]),
-  belongsTo: () => {},
-  hasMany: () => {}
-};
-
-// Comentado - código original
-/*
+// Definição do modelo Music
 const Music = sequelize.define('Music', {
   id: {
     type: DataTypes.INTEGER,
@@ -37,39 +17,39 @@ const Music = sequelize.define('Music', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  album: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   filePath: {
     type: DataTypes.STRING,
-    allowNull: true,
-    comment: 'Caminho do arquivo no sistema'
+    allowNull: true
   },
   youtubeId: {
     type: DataTypes.STRING,
-    allowNull: true,
-    comment: 'ID do vídeo do YouTube'
-  },
-  spotifyId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    comment: 'ID da música no Spotify'
+    allowNull: true
   },
   duration: {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: 'Duração em segundos'
   },
+  playCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
   radioId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Radio,
-      key: 'id'
-    }
+    allowNull: false
   }
 });
 
 // Definir relação com rádio
 Music.belongsTo(Radio, { foreignKey: 'radioId' });
 Radio.hasMany(Music, { foreignKey: 'radioId' });
-*/
 
 module.exports = Music; 

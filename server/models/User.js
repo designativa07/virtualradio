@@ -2,22 +2,7 @@ const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
 
-// Modo offline - mock do modelo User
-const User = {
-  findOne: async () => null,
-  findByPk: async () => null,
-  hasMany: () => {},
-  create: async () => ({
-    id: 1,
-    name: 'Admin',
-    email: 'admin@myradio.com',
-    role: 'admin'
-  }),
-  belongsTo: () => {}
-};
-
-// Comentado - código original
-/*
+// Definição do modelo User
 const User = sequelize.define('User', {
   id: {
     type: DataTypes.INTEGER,
@@ -65,6 +50,5 @@ const User = sequelize.define('User', {
 User.prototype.checkPassword = async function(password) {
   return await bcrypt.compare(password, this.password);
 };
-*/
 
 module.exports = User; 

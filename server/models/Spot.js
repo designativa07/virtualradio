@@ -2,35 +2,14 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const Radio = require('./Radio');
 
-// Modo offline - mock do modelo Spot
-const Spot = {
-  findOne: async () => null,
-  findByPk: async () => null,
-  findAll: async () => [],
-  create: async (data) => ({
-    id: 1,
-    name: data?.name || 'Spot Exemplo',
-    description: data?.description || 'Descrição do spot de exemplo',
-    filePath: data?.filePath || '/uploads/spot/exemplo.mp3',
-    duration: 30,
-    isActive: true,
-    radioId: 1
-  }),
-  destroy: async () => true,
-  update: async () => ([1, [{id: 1}]]),
-  belongsTo: () => {},
-  hasMany: () => {}
-};
-
-// Comentado - código original
-/*
+// Definição do modelo Spot
 const Spot = sequelize.define('Spot', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  name: {
+  title: {
     type: DataTypes.STRING,
     allowNull: false
   },
@@ -40,41 +19,34 @@ const Spot = sequelize.define('Spot', {
   },
   filePath: {
     type: DataTypes.STRING,
-    allowNull: false,
-    comment: 'Caminho do arquivo no sistema'
+    allowNull: true
+  },
+  youtubeId: {
+    type: DataTypes.STRING,
+    allowNull: true
   },
   duration: {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: 'Duração em segundos'
   },
+  priority: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1,
+    comment: 'Prioridade do spot (maior número = maior prioridade)'
+  },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
-  startDate: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    comment: 'Data de início da veiculação'
-  },
-  endDate: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    comment: 'Data de término da veiculação'
-  },
   radioId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Radio,
-      key: 'id'
-    }
+    allowNull: false
   }
 });
 
 // Definir relação com rádio
 Spot.belongsTo(Radio, { foreignKey: 'radioId' });
 Radio.hasMany(Spot, { foreignKey: 'radioId' });
-*/
 
 module.exports = Spot; 
