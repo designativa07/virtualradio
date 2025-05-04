@@ -31,8 +31,19 @@ export default function Dashboard() {
     // Check authentication
     const checkAuth = async () => {
       try {
+        // Obter o token do localStorage
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
+          // Redirect to login if not authenticated
+          router.push('/login');
+          return;
+        }
+        
         const response = await fetch(`${getApiUrl()}/api/auth/me`, {
-          credentials: 'include', // Importante: envia cookies com a requisição
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
         
         if (!response.ok) {
@@ -57,8 +68,17 @@ export default function Dashboard() {
   
   const fetchRadios = async () => {
     try {
+      // Obter o token do localStorage
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        return;
+      }
+      
       const response = await fetch(`${getApiUrl()}/api/radio`, {
-        credentials: 'include', // Importante: envia cookies com a requisição
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (response.ok) {

@@ -31,8 +31,18 @@ export default function Navbar() {
     // Verificar autenticação para mostrar o estado de login correto
     const checkAuth = async () => {
       try {
+        // Obter o token do localStorage
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+        
         const response = await fetch(`${getApiUrl()}/api/auth/me`, {
-          credentials: 'include', // Importante: envia cookies com a requisição
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
         
         if (response.ok) {
@@ -51,15 +61,10 @@ export default function Navbar() {
   
   const handleLogout = async () => {
     try {
-      const response = await fetch(`${getApiUrl()}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include', // Importante: envia cookies com a requisição
-      });
-      
-      if (response.ok) {
-        setUser(null);
-        router.push('/');
-      }
+      // Com JWT, apenas removemos o token do localStorage
+      localStorage.removeItem('authToken');
+      setUser(null);
+      router.push('/');
     } catch (error) {
       console.error('Error logging out:', error);
     }

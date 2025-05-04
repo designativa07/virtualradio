@@ -75,6 +75,13 @@ export default function Login() {
         if (response.ok) {
           const result = await response.json();
           console.log('Fallback login successful:', result);
+          
+          // Salvar o token no localStorage
+          if (result.token) {
+            localStorage.setItem('authToken', result.token);
+            console.log('Token salvo no localStorage');
+          }
+          
           router.push('/dashboard');
           return true;
         }
@@ -136,6 +143,12 @@ export default function Login() {
       if (!response.ok) {
         setError(result.message || 'Login failed');
         return;
+      }
+      
+      // Salvar o token no localStorage
+      if (result.token) {
+        localStorage.setItem('authToken', result.token);
+        console.log('Token salvo no localStorage');
       }
       
       // Redirect to dashboard on successful login

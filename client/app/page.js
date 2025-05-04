@@ -28,8 +28,18 @@ export default function Home() {
     // Check if user is logged in
     const checkAuth = async () => {
       try {
+        // Obter o token do localStorage
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+        
         const response = await fetch(`${getApiUrl()}/api/auth/me`, {
-          credentials: 'include', // Importante: envia cookies com a requisição
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
         
         if (response.ok) {

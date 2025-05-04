@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const fileUpload = require('express-fileupload');
 const session = require('express-session');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
 
 // Load environment variables
 dotenv.config();
@@ -104,6 +105,8 @@ async function setupServer() {
   app.post('/api/auth/login-fallback', (req, res) => {
     const { email, password } = req.body;
     
+    const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
+    
     console.log('Login fallback tentado com:', { email });
     
     // Aceitar tanto 'admin' quanto 'admin@admin.com'
@@ -115,15 +118,16 @@ async function setupServer() {
         role: 'admin'
       };
       
-      req.session.user = user;
+      // Gerar token JWT
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
       
       // Log de depuração
       console.log('Login fallback bem-sucedido:', { user });
-      console.log('Sessão:', req.session);
       
       return res.json({ 
         message: 'Login bem-sucedido (modo fallback)',
         user: user,
+        token: token,
         mode: 'fallback'
       });
     } else {

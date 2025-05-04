@@ -1,10 +1,43 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
 const db = require('../config/database');
 
+// Chave secreta para JWT
+const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
+
+// Middleware para verificar token JWT
+const verifyToken = (req, res, next) => {
+  // Obter o token do cabeçalho Authorization ou dos cookies
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  
+  console.log('Token recebido:', token ? 'Sim' : 'Não');
+  
+  if (!token) {
+    console.log('Nenhum token fornecido');
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    console.log('Token verificado com sucesso:', decoded);
+    next();
+  } catch (error) {
+    console.error('Erro ao verificar token:', error.message);
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+};
+
 // Test database connection before proceeding with any auth request
 router.use(async (req, res, next) => {
+  // Pular verificação de banco de dados para rota /me
+  if (req.path === '/me') {
+    return next();
+  }
+  
   try {
     // Try to get a connection to verify database is working
     const connection = await db.getConnection();
@@ -18,15 +51,21 @@ router.use(async (req, res, next) => {
       const { email, password } = req.body;
       if (email === 'admin' && password === 'admin123') {
         console.log('Using fallback admin login due to database error');
-        req.session.user = {
+        
+        const user = {
           id: 0,
           username: 'Admin',
           email: 'admin',
           role: 'admin'
         };
+        
+        // Gerar token JWT
+        const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+        
         return res.json({ 
           message: 'Login successful (fallback mode)',
-          user: req.session.user,
+          user: user,
+          token: token,
           mode: 'fallback'
         });
       }
@@ -44,16 +83,21 @@ router.post('/login', async (req, res) => {
   
   try {
     // Special handling for admin/admin123 in all environments for testing
-    if (email === 'admin' && password === 'admin123') {
-      req.session.user = {
+    if ((email === 'admin' || email === 'admin@admin.com' || email === 'admin@virtualradio.com') && password === 'admin123') {
+      const user = {
         id: 0,
         username: 'Admin',
-        email: 'admin',
+        email: email,
         role: 'admin'
       };
+      
+      // Gerar token JWT
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+      
       return res.json({ 
         message: 'Login successful (admin mode)',
-        user: req.session.user
+        user: user,
+        token: token
       });
     }
     
@@ -70,22 +114,21 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
     
-    // Create session
-    req.session.user = {
+    // Criar objeto de usuário para o token
+    const userForToken = {
       id: user.id,
       username: user.username,
       email: user.email,
       role: user.role
     };
     
+    // Gerar token JWT
+    const token = jwt.sign(userForToken, JWT_SECRET, { expiresIn: '24h' });
+    
     res.json({ 
       message: 'Login successful',
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
+      user: userForToken,
+      token: token
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -93,28 +136,16 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Logout route
+// Logout route (com JWT não precisamos fazer nada no servidor, apenas no cliente)
 router.post('/logout', (req, res) => {
-  req.session.destroy(err => {
-    if (err) {
-      return res.status(500).json({ message: 'Logout failed' });
-    }
-    res.json({ message: 'Logout successful' });
-  });
+  res.json({ message: 'Logout successful' });
 });
 
 // Get current user
-router.get('/me', (req, res) => {
-  console.log('Rota /me chamada. Sessão existe?', !!req.session);
-  console.log('Conteúdo da sessão:', req.session);
-  
-  if (!req.session.user) {
-    console.log('Usuário não autenticado na sessão');
-    return res.status(401).json({ message: 'Not authenticated' });
-  }
-  
-  console.log('Usuário autenticado:', req.session.user);
-  res.json({ user: req.session.user });
+router.get('/me', verifyToken, (req, res) => {
+  console.log('Rota /me chamada');
+  // O middleware verifyToken já verificou o token e adicionou o user ao req
+  res.json({ user: req.user });
 });
 
 module.exports = router; 
