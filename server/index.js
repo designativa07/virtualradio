@@ -9,6 +9,17 @@ const fs = require('fs');
 // Load environment variables
 dotenv.config();
 
+// Print environment variables (excluding sensitive data)
+console.log('Environment variables loaded:', {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: process.env.PORT || 3000,
+  DB_HOST: process.env.DB_HOST ? '✓ Set' : '✗ Not set',
+  DB_USER: process.env.DB_USER ? '✓ Set' : '✗ Not set',
+  DB_NAME: process.env.DB_NAME ? '✓ Set' : '✗ Not set',
+  DB_PASS: process.env.DB_PASS ? '✓ Set' : '✗ Not set (Empty DB password)',
+  SESSION_SECRET: process.env.SESSION_SECRET ? '✓ Set' : '✗ Not set',
+});
+
 // Configuração principal do servidor
 async function setupServer() {
   const app = express();
@@ -31,70 +42,130 @@ async function setupServer() {
     cookie: { secure: process.env.NODE_ENV === 'production' }
   }));
 
+  // Ensure uploads directory exists
+  const uploadsDir = path.join(__dirname, '../uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    console.log('Created uploads directory');
+  }
+
   // Servir uploads
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  app.use('/uploads', express.static(uploadsDir));
 
-  // API Routes
-  app.use('/api/auth', require('./routes/auth'));
-  app.use('/api/admin', require('./routes/admin'));
-  app.use('/api/radio', require('./routes/radio'));
-  app.use('/api/audio', require('./routes/audio'));
-
-  // Test route
+  // Test route that doesn't require database
   app.get('/api/test', (req, res) => {
-    res.json({ message: 'API working correctly' });
+    res.json({ 
+      message: 'API working correctly',
+      env: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString()
+    });
   });
 
-  // Servir os arquivos estáticos do Next.js em produção
-  if (process.env.NODE_ENV === 'production') {
-    const nextPath = path.join(__dirname, '../client/.next');
-    
-    // Verifique se a pasta .next existe (build normal do Next.js)
-    if (fs.existsSync(nextPath)) {
-      console.log('Servindo arquivos estáticos do Next.js da pasta .next');
+  // Set up error handling for missing routes/DB issues
+  app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ 
+      error: 'Server error', 
+      message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+    });
+  });
+
+  try {
+    // Try to load API routes
+    // Wrap in try/catch to prevent crashing if database connection fails
+    try {
+      app.use('/api/auth', require('./routes/auth'));
+      app.use('/api/admin', require('./routes/admin'));
+      app.use('/api/radio', require('./routes/radio'));
+      app.use('/api/audio', require('./routes/audio'));
+      console.log('API routes loaded successfully');
+    } catch (err) {
+      console.error('Error loading API routes:', err);
+      app.use('/api/auth', (req, res) => res.status(500).json({ error: 'Authentication service unavailable' }));
+      app.use('/api/admin', (req, res) => res.status(500).json({ error: 'Admin service unavailable' }));
+      app.use('/api/radio', (req, res) => res.status(500).json({ error: 'Radio service unavailable' }));
+      app.use('/api/audio', (req, res) => res.status(500).json({ error: 'Audio service unavailable' }));
+    }
+
+    // Servir os arquivos estáticos do Next.js em produção
+    if (process.env.NODE_ENV === 'production') {
+      const nextPath = path.join(__dirname, '../client/.next');
       
-      // Servir arquivos estáticos do Next.js
-      app.use('/_next', express.static(path.join(__dirname, '../client/.next')));
-      
-      // Também servir arquivos da pasta public
-      app.use(express.static(path.join(__dirname, '../client/public')));
-      
-      try {
-        // Carregar o Next.js para lidar com as rotas não capturadas pelas APIs
-        const next = require('next');
-        const dev = process.env.NODE_ENV !== 'production';
-        const nextApp = next({ dev, dir: path.join(__dirname, '../client') });
-        const handle = nextApp.getRequestHandler();
+      // Verifique se a pasta .next existe (build normal do Next.js)
+      if (fs.existsSync(nextPath)) {
+        console.log('Servindo arquivos estáticos do Next.js da pasta .next');
         
-        // Preparar o Next.js
-        console.log('Inicializando Next.js para SSR...');
-        await nextApp.prepare();
+        // Servir arquivos estáticos do Next.js
+        app.use('/_next', express.static(path.join(__dirname, '../client/.next')));
         
-        // Deixar o Next.js lidar com todas as outras rotas
-        app.get('*', (req, res) => {
-          return handle(req, res);
-        });
+        // Também servir arquivos da pasta public
+        app.use(express.static(path.join(__dirname, '../client/public')));
         
-        console.log('Next.js integrado com sucesso');
-      } catch (err) {
-        console.error('Erro ao carregar o Next.js:', err);
-        
-        // Fallback simples se Next.js não puder ser carregado
-        app.get('*', (req, res) => {
-          res.status(500).send(`
+        try {
+          // Carregar o Next.js para lidar com as rotas não capturadas pelas APIs
+          const next = require('next');
+          const dev = process.env.NODE_ENV !== 'production';
+          const nextApp = next({ dev, dir: path.join(__dirname, '../client') });
+          const handle = nextApp.getRequestHandler();
+          
+          // Preparar o Next.js
+          console.log('Inicializando Next.js para SSR...');
+          await nextApp.prepare();
+          
+          // Deixar o Next.js lidar com todas as outras rotas
+          app.get('*', (req, res) => {
+            return handle(req, res);
+          });
+          
+          console.log('Next.js integrado com sucesso');
+        } catch (err) {
+          console.error('Erro ao carregar o Next.js:', err);
+          
+          // Fallback simples se Next.js não puder ser carregado
+          app.get('*', (req, res) => {
+            res.status(500).send(`
+            <html>
+              <head>
+                <title>VirtualRadio - Erro de Servidor</title>
+                <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; padding: 40px; max-width: 650px; margin: 0 auto; }
+                  h1 { color: #e53e3e; }
+                  .box { background: #f7f7f7; padding: 20px; border-radius: 8px; border-left: 4px solid #e53e3e; margin: 20px 0; }
+                </style>
+              </head>
+              <body>
+                <h1>Erro no Servidor</h1>
+                <div class="box">
+                  <p>Ocorreu um erro ao renderizar a aplicação. Tente novamente mais tarde ou contate o administrador.</p>
+                  <p>A API do servidor ainda pode estar funcionando. <a href="/api/test">Testar API</a></p>
+                </div>
+              </body>
+            </html>
+            `);
+          });
+        }
+      } else {
+        // Se não encontrou build do Next.js, use o fallback
+        app.get('*', (req, res, next) => {
+          if (req.path.startsWith('/api/')) {
+            // Continue para rotas de API
+            return next();
+          }
+          
+          res.status(404).send(`
           <html>
             <head>
-              <title>VirtualRadio - Erro de Servidor</title>
+              <title>VirtualRadio - Aplicação não encontrada</title>
               <style>
                 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; padding: 40px; max-width: 650px; margin: 0 auto; }
-                h1 { color: #e53e3e; }
-                .box { background: #f7f7f7; padding: 20px; border-radius: 8px; border-left: 4px solid #e53e3e; margin: 20px 0; }
+                h1 { color: #4a5568; }
+                .box { background: #f7f7f7; padding: 20px; border-radius: 8px; border-left: 4px solid #4a5568; margin: 20px 0; }
               </style>
             </head>
             <body>
-              <h1>Erro no Servidor</h1>
+              <h1>Aplicação não encontrada</h1>
               <div class="box">
-                <p>Ocorreu um erro ao renderizar a aplicação. Tente novamente mais tarde ou contate o administrador.</p>
+                <p>A aplicação não foi encontrada ou não foi compilada corretamente.</p>
                 <p>A API do servidor ainda pode estar funcionando. <a href="/api/test">Testar API</a></p>
               </div>
             </body>
@@ -103,53 +174,42 @@ async function setupServer() {
         });
       }
     } else {
-      // Se não encontrou build do Next.js, use o fallback
-      app.get('*', (req, res) => {
+      // Em desenvolvimento, apenas redirecionar para a API (o frontend será executado separadamente)
+      app.get('*', (req, res, next) => {
         if (req.path.startsWith('/api/')) {
-          // Continue para rotas de API
           return next();
         }
-        
-        res.status(404).send(`
-        <html>
-          <head>
-            <title>VirtualRadio - Aplicação não encontrada</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; padding: 40px; max-width: 650px; margin: 0 auto; }
-              h1 { color: #4a5568; }
-              .box { background: #f7f7f7; padding: 20px; border-radius: 8px; border-left: 4px solid #4a5568; margin: 20px 0; }
-            </style>
-          </head>
-          <body>
-            <h1>Aplicação não encontrada</h1>
-            <div class="box">
-              <p>A aplicação não foi encontrada ou não foi compilada corretamente.</p>
-              <p>A API do servidor ainda pode estar funcionando. <a href="/api/test">Testar API</a></p>
-            </div>
-          </body>
-        </html>
-        `);
+        res.status(404).send('Aplicação frontend não disponível em modo de desenvolvimento. Use npm run dev:client para iniciar o frontend.');
       });
     }
-  } else {
-    // Em desenvolvimento, apenas redirecionar para a API (o frontend será executado separadamente)
-    app.get('*', (req, res) => {
-      if (!req.path.startsWith('/api/')) {
-        res.status(404).send('Aplicação frontend não disponível em modo de desenvolvimento. Use npm run dev:client para iniciar o frontend.');
+
+    // Start server
+    const PORT = process.env.PORT || 3000;
+    const server = app.listen(PORT, () => {
+      console.log(`VirtualRadio server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+
+    // Handle server errors
+    server.on('error', (error) => {
+      console.error('Server error:', error);
+      if (error.code === 'EACCES') {
+        console.error(`Port ${PORT} requires elevated privileges`);
+      } else if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use`);
       }
     });
-  }
 
-  // Start server
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`VirtualRadio server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
+    return server;
+  } catch (err) {
+    console.error('Critical error during server setup:', err);
+    throw err;
+  }
 }
 
 // Iniciar o servidor
 setupServer().catch(err => {
   console.error('Erro fatal ao iniciar o servidor:', err);
-  process.exit(1);
+  // Don't exit process immediately to allow logs to be written
+  setTimeout(() => process.exit(1), 1000);
 }); 
