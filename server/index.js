@@ -162,12 +162,13 @@ async function setupServer() {
       app.use('/api/audio', (req, res) => res.status(503).json({ error: 'Serviço de áudio indisponível' }));
     }
 
-    // Servir os arquivos estáticos do Next.js em produção
+    // Servir arquivos estáticos do Next.js em produção
     if (process.env.NODE_ENV === 'production') {
+      // Caminho para os arquivos do Next.js
       const nextPath = path.join(__dirname, '../client/.next');
       const publicPath = path.join(__dirname, '../client/public');
       
-      // Verifique se a pasta .next existe (build normal do Next.js)
+      // Verificar se a pasta .next existe (build normal do Next.js)
       if (fs.existsSync(nextPath)) {
         console.log('Servindo arquivos estáticos do Next.js da pasta .next');
         
@@ -179,93 +180,61 @@ async function setupServer() {
           app.use(express.static(publicPath));
         }
         
-        // Tentar inicializar o Next.js para SSR com tratamento de erros apropriado
-        let nextHandler = null;
+        // ALTERAÇÃO: Em vez de usar SSR, servir os arquivos HTML estáticos para evitar erros de renderização
+        app.get('*', (req, res, next) => {
+          // Pular rotas de API
+          if (req.path.startsWith('/api/')) {
+            return next();
+          }
+          
+          // Determinar qual arquivo HTML servir
+          let htmlPath = path.join(__dirname, '../client/.next/server/pages');
+          
+          // Normalizar o caminho da requisição
+          const normalizedPath = req.path === '/' ? '/index' : req.path;
+          const htmlFilePath = path.join(htmlPath, `${normalizedPath}.html`);
+          
+          // Verificar se o arquivo HTML existe
+          if (fs.existsSync(htmlFilePath)) {
+            return res.sendFile(htmlFilePath);
+          }
+          
+          // Fallback para o arquivo 404.html ou index.html
+          const notFoundPath = path.join(htmlPath, '404.html');
+          if (fs.existsSync(notFoundPath)) {
+            return res.status(404).sendFile(notFoundPath);
+          }
+          
+          // Se tudo mais falhar, usar index.html
+          const indexPath = path.join(htmlPath, 'index.html');
+          if (fs.existsSync(indexPath)) {
+            return res.sendFile(indexPath);
+          }
+          
+          // Fallback final é uma mensagem de erro simples
+          res.status(404).send(`
+          <html>
+            <head>
+              <title>VirtualRadio - Página não encontrada</title>
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; padding: 40px; max-width: 650px; margin: 0 auto; }
+                h1 { color: #4a5568; }
+                .box { background: #f7f7f7; padding: 20px; border-radius: 8px; border-left: 4px solid #4a5568; margin: 20px 0; }
+              </style>
+            </head>
+            <body>
+              <h1>Página não encontrada</h1>
+              <div class="box">
+                <p>A página solicitada não foi encontrada.</p>
+                <p>A API do servidor ainda pode estar funcionando. <a href="/api/test">Testar API</a></p>
+                <p>Para entrar no modo admin, use <a href="/api/auth/login-fallback">login alternativo</a> com admin/admin123</p>
+              </div>
+            </body>
+          </html>
+          `);
+        });
         
-        try {
-          // Carregar o Next.js para lidar com as rotas não capturadas pelas APIs
-          const next = require('next');
-          const dev = process.env.NODE_ENV !== 'production';
-          const nextApp = next({ 
-            dev, 
-            dir: path.join(__dirname, '../client'),
-            conf: {
-              // Configuração mais segura para evitar problemas de memória
-              onDemandEntries: {
-                maxInactiveAge: 60 * 1000, // 1 minuto
-                pagesBufferLength: 2,
-              }
-            }
-          });
-          
-          // Preparar o Next.js com timeout para evitar deadlock
-          console.log('Inicializando Next.js para SSR...');
-          
-          // Set a timeout to avoid waiting indefinitely
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Next.js prepare timeout')), 30000); // 30 segundos
-          });
-          
-          // Race between Next.js prepare and timeout
-          const handlePromise = Promise.race([
-            nextApp.prepare(),
-            timeoutPromise
-          ]).then(() => {
-            console.log('Next.js inicializado com sucesso');
-            return nextApp.getRequestHandler();
-          }).catch(err => {
-            console.error('Erro ao inicializar Next.js:', err);
-            return null;
-          });
-          
-          // Esperar pela inicialização, mas com timeout
-          try {
-            nextHandler = await handlePromise;
-          } catch (err) {
-            console.error('Falha na inicialização do Next.js:', err);
-          }
-          
-          if (nextHandler) {
-            // Deixar o Next.js lidar com todas as outras rotas
-            app.get('*', (req, res) => {
-              return nextHandler(req, res);
-            });
-            console.log('Next.js integrado com sucesso');
-          } else {
-            throw new Error('Next.js handler não disponível');
-          }
-        } catch (err) {
-          console.error('Erro ao carregar o Next.js:', err);
-          
-          // Fallback simples se Next.js não puder ser carregado
-          app.get('*', (req, res) => {
-            // Skip API routes
-            if (req.path.startsWith('/api/')) {
-              return next();
-            }
-            
-            res.status(500).send(`
-            <html>
-              <head>
-                <title>VirtualRadio - Erro de Servidor</title>
-                <style>
-                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; padding: 40px; max-width: 650px; margin: 0 auto; }
-                  h1 { color: #e53e3e; }
-                  .box { background: #f7f7f7; padding: 20px; border-radius: 8px; border-left: 4px solid #e53e3e; margin: 20px 0; }
-                </style>
-              </head>
-              <body>
-                <h1>Erro no Servidor</h1>
-                <div class="box">
-                  <p>Ocorreu um erro ao renderizar a aplicação. Tente novamente mais tarde ou contate o administrador.</p>
-                  <p>A API do servidor ainda pode estar funcionando. <a href="/api/test">Testar API</a></p>
-                  <p>Para entrar no modo admin, use <a href="/api/auth/login-fallback">login alternativo</a> com admin/admin123</p>
-                </div>
-              </body>
-            </html>
-            `);
-          });
-        }
+        console.log('Configuração para servir arquivos estáticos concluída');
       } else {
         // Se não encontrou build do Next.js, use o fallback
         app.get('*', (req, res, next) => {
