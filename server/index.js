@@ -18,12 +18,23 @@ const app = express();
 
 // Configurar middlewares de segurança e otimização
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "cdn-icons-png.flaticon.com"],
+      connectSrc: ["'self'", "https://myradio.h4xd66.easypanel.host"]
+    }
+  }
 }));
 app.use(compression());
 app.use(cors({
   origin: ['https://myradio.h4xd66.easypanel.host', 'http://localhost:5000'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -33,6 +44,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Configurar pasta estática para arquivos estáticos
 app.use(express.static(path.join(__dirname, '..'))); 
+app.use('/client', express.static(path.join(__dirname, '..', 'client')));
+app.use('/admin', express.static(path.join(__dirname, '..', 'admin')));
 
 // Configurar rotas da API
 app.use('/api/auth', authRoutes);
