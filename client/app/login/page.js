@@ -38,40 +38,60 @@ export default function Login() {
   
   // Tentar autenticar com as credenciais padrão se houver problemas de banco de dados
   const tryFallbackLogin = async (data) => {
-    try {
-      const fallbackUrl = `${getApiUrl()}/api/auth/login-fallback`;
-      console.log('Tentando login fallback em:', fallbackUrl);
+    const fallbackEmails = [
+      data.email, // Email que o usuário forneceu
+      'admin',    // Email simples (sem @)
+      'admin@admin.com',  // Combinação que tentamos antes
+      'admin@virtualradio.com' // Email do banco de dados padrão
+    ];
+    
+    // Verificar se já estamos usando admin123
+    const isUsingAdminPass = data.password === 'admin123';
+    
+    for (const email of fallbackEmails) {
+      // Se não estamos usando a senha admin123, só tente com o email original
+      if (!isUsingAdminPass && email !== data.email) continue;
       
-      const response = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      console.log('Status da resposta fallback:', response.status);
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Fallback login successful:', result);
-        router.push('/dashboard');
-        return true;
-      }
-      
-      // Tentar ler a resposta de erro
       try {
-        const errorData = await response.json();
-        console.log('Erro no fallback login:', errorData);
-      } catch (e) {
-        console.log('Não foi possível ler resposta de erro do fallback');
+        const credentials = { 
+          email: email, 
+          password: isUsingAdminPass ? 'admin123' : data.password 
+        };
+        
+        const fallbackUrl = `${getApiUrl()}/api/auth/login-fallback`;
+        console.log(`Tentando login fallback com email: ${email}`);
+        
+        const response = await fetch(fallbackUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(credentials),
+        });
+        
+        console.log(`Status da resposta fallback (${email}):`, response.status);
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Fallback login successful:', result);
+          router.push('/dashboard');
+          return true;
+        }
+        
+        // Tentar ler a resposta de erro
+        try {
+          const errorData = await response.json();
+          console.log(`Erro no fallback login (${email}):`, errorData);
+        } catch (e) {
+          console.log('Não foi possível ler resposta de erro do fallback');
+        }
+      } catch (error) {
+        console.error(`Erro no fallback login (${email}):`, error);
       }
-      
-      return false;
-    } catch (error) {
-      console.error('Erro no fallback login:', error);
-      return false;
     }
+    
+    // Se chegou aqui, todas as tentativas falharam
+    return false;
   };
   
   const onSubmit = async (data) => {
@@ -120,7 +140,7 @@ export default function Login() {
       router.push('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      setError(`Erro: ${error.message}. Tente admin@admin.com / admin123.`);
+      setError(`Erro: ${error.message}. Tente admin@virtualradio.com / admin123.`);
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +206,7 @@ export default function Login() {
         </form>
         
         <div className="mt-4 text-center text-sm">
-          <p>Default credentials: admin@admin.com / admin123</p>
+          <p>Default credentials: admin@virtualradio.com / admin123</p>
         </div>
         
         <div className="mt-6 text-center">
