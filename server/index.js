@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
+const compression = require('compression');
 
 // Importar modelos e sincronizar com o banco de dados
 const { syncModels } = require('./models');
@@ -14,7 +16,9 @@ const spotRoutes = require('./routes/spotRoutes');
 // Criar aplicação Express
 const app = express();
 
-// Configurar middlewares
+// Configurar middlewares de segurança e otimização
+app.use(helmet());
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -61,7 +65,7 @@ app.use((err, req, res, next) => {
   console.error('Erro no servidor:', err);
   res.status(500).json({
     message: 'Erro interno do servidor',
-    error: err.message
+    error: process.env.NODE_ENV === 'production' ? 'Erro interno' : err.message
   });
 });
 
@@ -77,7 +81,7 @@ const PORT = process.env.PORT || 5000;
     // Iniciar servidor
     app.listen(PORT, () => {
       console.log(`Servidor rodando na porta ${PORT}`);
-      console.log(`Acesse http://localhost:${PORT} para acessar a aplicação`);
+      console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     console.error('Erro ao iniciar servidor:', error);

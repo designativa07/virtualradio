@@ -1,21 +1,6 @@
 const { Sequelize } = require('sequelize');
 
-// Modo offline - Sequelize falso
-const sequelizeMock = {
-  define: () => {
-    return {
-      belongsTo: () => {},
-      hasMany: () => {}
-    };
-  },
-  sync: async () => true,
-  authenticate: async () => true
-};
-
-console.log('Modo offline ativado: usando mock do banco de dados');
-
-// Linha comentada - configuração real
-/*
+// Configuração real do banco de dados
 const sequelize = new Sequelize('desig938_myradio', 'desig938_myradio', 'f}gjuk$sem6.', {
   host: '108.167.132.244',
   dialect: 'mysql',
@@ -39,6 +24,5 @@ const testConnection = async () => {
 };
 
 testConnection();
-*/
 
-module.exports = sequelizeMock; 
+module.exports = sequelize; 
