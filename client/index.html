@@ -226,7 +226,7 @@
     let audioPlayer = new Audio();
     let isPlaying = false;
     let apiUrl = 'https://myradio.h4xd66.easypanel.host/api';
-    console.log('API URL:', apiUrl); // Adicionar log para debug
+    console.log('API URL:', apiUrl); // Log para debug
 
     // Elementos do DOM
     const loginSection = document.getElementById('loginSection');
@@ -406,13 +406,10 @@
         if (data.success) {
           playlist = data.data;
           if (playlist.length > 0) {
-            currentTrackIndex = 0;
-            loadTrack(currentTrackIndex);
+            loadTrack(0);
             showPlayer();
           } else {
-            // Sem músicas, pode-se implementar um placeholder
-            alert('Adicione músicas à sua rádio no painel administrativo!');
-            showRadioSelection();
+            alert('Esta rádio não tem músicas ainda.');
           }
         }
       })
@@ -545,8 +542,17 @@
           },
           body: JSON.stringify({ email, password })
         })
-        .then(response => response.json())
+        .then(response => {
+          console.log('Resposta do login:', response.status);
+          if (!response.ok) {
+            return response.json().then(err => {
+              throw new Error(err.message || 'Erro no login');
+            });
+          }
+          return response.json();
+        })
         .then(data => {
+          console.log('Dados do login:', data);
           if (data.success) {
             localStorage.setItem('myRadioToken', data.token);
             currentUser = data.user;
@@ -557,7 +563,10 @@
             alert(data.message || 'Erro ao fazer login');
           }
         })
-        .catch(error => console.error('Erro no login:', error));
+        .catch(error => {
+          console.error('Erro no login:', error);
+          alert(error.message || 'Erro ao conectar com o servidor');
+        });
       });
       
       registerForm.addEventListener('submit', (e) => {

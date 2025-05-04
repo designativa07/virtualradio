@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { User } = require('../models');
+require('dotenv').config();
 
-// Configuração fixa do JWT
-const JWT_SECRET = 'myradio_secret_key';
-const JWT_EXPIRES_IN = '1d';
+// Configuração do JWT usando variáveis de ambiente
+const JWT_SECRET = process.env.JWT_SECRET || 'myradio_secret_key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 
 // Gerar token JWT
 const generateToken = (userId) => {
@@ -16,12 +17,23 @@ const generateToken = (userId) => {
 // Registrar novo usuário
 exports.register = async (req, res) => {
   try {
+    console.log('Requisição de registro recebida:', req.body);
     const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Por favor, preencha todos os campos.' 
+      });
+    }
 
     // Verificar se o usuário já existe
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ message: 'Este email já está registrado.' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Este email já está registrado.' 
+      });
     }
 
     // Hash da senha
@@ -51,25 +63,43 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao registrar usuário:', error);
-    res.status(500).json({ message: 'Erro no servidor', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro no servidor', 
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 };
 
 // Login
 exports.login = async (req, res) => {
   try {
+    console.log('Requisição de login recebida:', req.body);
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Por favor, preencha todos os campos.' 
+      });
+    }
 
     // Buscar usuário
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(401).json({ message: 'Email ou senha inválidos.' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Email ou senha inválidos.' 
+      });
     }
 
     // Verificar senha
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Email ou senha inválidos.' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Email ou senha inválidos.' 
+      });
     }
 
     // Gerar token
@@ -88,7 +118,11 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao fazer login:', error);
-    res.status(500).json({ message: 'Erro no servidor', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro no servidor', 
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 };
 
@@ -101,7 +135,10 @@ exports.me = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: 'Usuário não encontrado.' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Usuário não encontrado.' 
+      });
     }
 
     res.status(200).json({
@@ -110,6 +147,10 @@ exports.me = async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao obter informações do usuário:', error);
-    res.status(500).json({ message: 'Erro no servidor', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro no servidor', 
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 }; 
