@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 
 // Configuração fixa do JWT
@@ -23,11 +24,15 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Este email já está registrado.' });
     }
 
+    // Hash da senha
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     // Criar novo usuário
     const user = await User.create({
       name,
       email,
-      password
+      password: hashedPassword
     });
 
     // Gerar token
@@ -53,22 +58,33 @@ exports.register = async (req, res) => {
 // Login
 exports.login = async (req, res) => {
   try {
-    // Bypass de autenticação - criar usuário temporário sem verificar no banco
-    const tempUser = {
-      id: 1,
-      name: 'Administrador Temporário',
-      email: req.body.email || 'admin@temp.com',
-      role: 'admin'
-    };
+    const { email, password } = req.body;
+
+    // Buscar usuário
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(401).json({ message: 'Email ou senha inválidos.' });
+    }
+
+    // Verificar senha
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Email ou senha inválidos.' });
+    }
 
     // Gerar token
-    const token = generateToken(tempUser.id);
+    const token = generateToken(user.id);
 
     // Retornar resposta
     res.status(200).json({
       success: true,
       token,
-      user: tempUser
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
     });
   } catch (error) {
     console.error('Erro ao fazer login:', error);
@@ -79,10 +95,18 @@ exports.login = async (req, res) => {
 // Verificar usuário atual
 exports.me = async (req, res) => {
   try {
-    // Bypass - retornar o usuário do req sem consultar o banco
+    // Buscar usuário no banco
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'name', 'email', 'role']
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+
     res.status(200).json({
       success: true,
-      user: req.user
+      user
     });
   } catch (error) {
     console.error('Erro ao obter informações do usuário:', error);

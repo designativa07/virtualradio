@@ -18,15 +18,12 @@ Spot.belongsTo(Radio, { foreignKey: 'radioId' });
 // Função para sincronizar todos os modelos com o banco de dados
 const syncModels = async () => {
   try {
-    // Bypass da sincronização com o banco de dados
-    console.log('Modo offline: Bypass da sincronização com o banco de dados');
+    await sequelize.sync({ alter: true });
+    console.log('Modelos sincronizados com o banco de dados.');
     return true;
-    
-    // Código original comentado
-    // await sequelize.sync({ alter: true });
-    // console.log('Modelos sincronizados com o banco de dados.');
   } catch (error) {
     console.error('Erro ao sincronizar modelos:', error);
+    throw error;
   }
 };
 
