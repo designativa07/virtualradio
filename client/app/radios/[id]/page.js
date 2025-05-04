@@ -6,18 +6,6 @@ import Link from 'next/link';
 import AudioPlayer from '../../../components/AudioPlayer';
 import AudioUploadForm from '../../../components/AudioUploadForm';
 
-// Esta função é executada apenas durante a compilação
-export async function generateStaticParams() {
-  // Isso é apenas para o tempo de compilação para criar a exportação estática
-  // Durante a execução, o código do lado do cliente manipulará a busca real de dados
-  return [
-    { id: '1' },
-    { id: '2' },
-    { id: '3' },
-    // Adicione mais se necessário, ou busque da API se disponível no momento da compilação
-  ];
-}
-
 export default function RadioDetail({ params }) {
   const router = useRouter();
   const radioId = params.id;
