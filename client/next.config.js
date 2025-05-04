@@ -9,12 +9,11 @@ const nextConfig = {
   },
   trailingSlash: true, // Adiciona / no final das URLs para compatibilidade com servidor estático
   
-  // Desabilitando recursos do App Router que não são compatíveis com exportação estática
+  // Configurações para desativar recursos incompatíveis com exportação estática
   experimental: {
-    appDir: true,
-    // Desativando RSC na exportação estática
+    // Remove appDir pois já está ativado por padrão nas versões recentes
+    // Remove serverComponents pois não é configurável desta forma
     serverActions: false,
-    serverComponents: false,
   },
 };
 
