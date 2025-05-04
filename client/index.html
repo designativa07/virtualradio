@@ -225,8 +225,11 @@
     let currentTrackIndex = 0;
     let audioPlayer = new Audio();
     let isPlaying = false;
-    let apiUrl = 'https://myradio.h4xd66.easypanel.host/api';
-    console.log('API URL:', apiUrl); // Log para debug
+    
+    // URL de API forçada para the EasyPanel
+    const apiUrl = 'https://myradio.h4xd66.easypanel.host/api';
+    
+    console.log('API URL (hardcoded):', apiUrl);
 
     // Elementos do DOM
     const loginSection = document.getElementById('loginSection');
@@ -511,6 +514,10 @@
 
     // Event Listeners
     document.addEventListener('DOMContentLoaded', () => {
+      // Testar conectividade com o servidor
+      testServerConnection();
+      
+      // Verificar autenticação
       checkAuth();
       
       // Login e registro
@@ -535,15 +542,23 @@
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         
-        fetch(`${apiUrl}/auth/login`, {
+        console.log('Tentando fazer login:', { email });
+        console.log('URL da API para login:', `${apiUrl}/auth/login`);
+        
+        // Usar a URL completa explicitamente para garantir
+        const loginUrl = 'https://myradio.h4xd66.easypanel.host/api/auth/login';
+        console.log('URL explícita:', loginUrl);
+        
+        fetch(loginUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email, password }),
+          mode: 'cors' // Garantir que as requisições CORS funcionem
         })
         .then(response => {
-          console.log('Resposta do login:', response.status);
+          console.log('Resposta do login:', response.status, response.statusText);
           if (!response.ok) {
             return response.json().then(err => {
               throw new Error(err.message || 'Erro no login');
@@ -576,14 +591,19 @@
         const password = document.getElementById('regPassword').value;
         
         console.log('Tentando registrar usuário:', { name, email });
-        console.log('URL da API:', `${apiUrl}/auth/register`);
+        console.log('URL da API para registro:', `${apiUrl}/auth/register`);
         
-        fetch(`${apiUrl}/auth/register`, {
+        // Usar a URL completa explicitamente para garantir
+        const registerUrl = 'https://myradio.h4xd66.easypanel.host/api/auth/register';
+        console.log('URL explícita:', registerUrl);
+        
+        fetch(registerUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ name, email, password })
+          body: JSON.stringify({ name, email, password }),
+          mode: 'cors' // Garantir que as requisições CORS funcionem
         })
         .then(response => {
           console.log('Resposta do servidor:', response.status, response.statusText);
@@ -609,7 +629,7 @@
         .catch(error => {
           console.error('Erro no registro:', error);
           if (error.message.includes('Failed to fetch')) {
-            alert('Não foi possível conectar ao servidor. Verifique se o servidor está rodando e tente novamente.');
+            alert('Não foi possível conectar ao servidor no EasyPanel. Verifique se a aplicação está ativa no EasyPanel e tente novamente.');
           } else {
             alert(error.message || 'Erro ao conectar com o servidor. Por favor, tente novamente.');
           }
@@ -622,6 +642,33 @@
       nextBtn.addEventListener('click', playNextTrack);
       volumeSlider.addEventListener('input', setVolume);
     });
+    
+    // Função para testar a conectividade com o servidor
+    function testServerConnection() {
+      console.log('Testando conexão com:', `${apiUrl}`);
+      
+      // Usar a URL explícita para o teste
+      const testUrl = 'https://myradio.h4xd66.easypanel.host/api';
+      
+      fetch(testUrl, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => {
+        console.log('Conexão com o servidor bem-sucedida:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Resposta do teste de conexão:', data);
+      })
+      .catch(error => {
+        console.error('Erro ao conectar com o servidor:', error);
+        alert('Não foi possível conectar ao servidor. Verifique se o servidor no EasyPanel está ativo.');
+      });
+    }
   </script>
 </body>
 </html> 

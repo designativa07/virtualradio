@@ -37,17 +37,22 @@ app.use(express.urlencoded({ extended: true }));
 // Configurar CORS
 app.use(cors({
   origin: [
-    process.env.API_URL || 'https://myradio.h4xd66.easypanel.host',
-    'http://localhost:5000'
+    'https://myradio.h4xd66.easypanel.host',
+    'http://myradio.h4xd66.easypanel.host',
+    'https://localhost:5000',
+    'http://localhost:5000',
+    'https://localhost',
+    'http://localhost'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Adicionar middleware para logging
+// Middleware para log de requisições
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  const now = new Date().toISOString();
+  console.log(`[${now}] ${req.method} ${req.url} - Origem: ${req.headers.origin || 'desconhecida'}`);
   next();
 });
 
