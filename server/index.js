@@ -17,9 +17,14 @@ const spotRoutes = require('./routes/spotRoutes');
 const app = express();
 
 // Configurar middlewares de segurança e otimização
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(compression());
-app.use(cors());
+app.use(cors({
+  origin: ['https://myradio.h4xd66.easypanel.host', 'http://localhost:5000'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
