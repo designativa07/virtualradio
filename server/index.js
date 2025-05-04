@@ -28,8 +28,27 @@ app.use(session({
   cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
-// Static files
-app.use(express.static(path.join(__dirname, '../client/dist')));
+// Static files for Next.js - serve both dist and .next depending on which exists
+const nextDistPath = path.join(__dirname, '../client/dist');
+const nextDotNextPath = path.join(__dirname, '../client/.next');
+const nextPublicPath = path.join(__dirname, '../client/public');
+
+// Check which directory exists and use that
+try {
+  if (require('fs').existsSync(nextDistPath)) {
+    app.use(express.static(nextDistPath));
+    console.log('Serving Next.js from dist directory');
+  } else if (require('fs').existsSync(nextDotNextPath)) {
+    app.use('/_next', express.static(nextDotNextPath));
+    app.use(express.static(nextPublicPath));
+    console.log('Serving Next.js from .next directory');
+  } else {
+    console.warn('Warning: Next.js build directories not found');
+  }
+} catch (err) {
+  console.error('Error checking Next.js directories:', err);
+}
+
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API Routes
@@ -45,7 +64,20 @@ app.get('/api/test', (req, res) => {
 
 // Serve SPA for any other route
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  const indexPath = require('fs').existsSync(path.join(nextDistPath, 'index.html')) 
+    ? path.join(nextDistPath, 'index.html')
+    : path.join(nextPublicPath, 'index.html');
+  
+  try {
+    if (require('fs').existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send('Application not built properly. Please check the build process.');
+    }
+  } catch (err) {
+    console.error('Error serving index.html:', err);
+    res.status(500).send('Server error when trying to serve the application');
+  }
 });
 
 // Start server

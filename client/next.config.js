@@ -8,12 +8,12 @@ const nextConfig = {
         source: '/api/:path*',
         destination: process.env.NODE_ENV === 'development' 
           ? 'http://localhost:3000/api/:path*'
-          : 'http://localhost:3000/api/:path*', // In production this will be handled by our server
+          : '/api/:path*', // In production, let Express handle the API requests
       },
     ];
   },
-  // Use Next.js default output mode (not 'export')
-  distDir: 'dist', // Still use dist instead of .next
+  // Use standard output mode (not static export)
+  distDir: '.next', // Use standard Next.js directory
 };
 
 module.exports = nextConfig; 
