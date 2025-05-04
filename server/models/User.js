@@ -1,8 +1,14 @@
+// DESATIVAÇÃO DO MODO OFFLINE
+// Este arquivo foi modificado para garantir que não há modo offline
+// Data: 04/05/2025
+
 const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
 
-// Definição do modelo User
+console.log('Carregando modelo User (modo online)');
+
+// Definição do modelo User - APENAS MODO ONLINE
 const User = sequelize.define('User', {
   id: {
     type: DataTypes.INTEGER,

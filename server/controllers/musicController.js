@@ -28,27 +28,6 @@ exports.uploadMusic = async (req, res) => {
       return res.status(400).json({ message: 'Nenhum arquivo foi enviado.' });
     }
 
-    // Modo offline - criar música de exemplo
-    const exampleMusic = {
-      id: Date.now(), // ID único baseado no timestamp
-      title: title || (req.file ? path.basename(req.file.originalname, path.extname(req.file.originalname)) : 'Música Exemplo'),
-      artist: artist || 'Artista',
-      filePath: req.file ? req.file.path : '/uploads/music/exemplo_novo.mp3',
-      duration: Math.floor(Math.random() * (300 - 180 + 1) + 180),
-      radioId: parseInt(radioId),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    // Responder com sucesso e dados de exemplo
-    res.status(201).json({
-      success: true,
-      data: exampleMusic
-    });
-    
-    return;
-    
-    /* Código original comentado
     // Verificar se a rádio pertence ao usuário
     const isOwner = await checkRadioOwnership(radioId, req.user.id);
     if (!isOwner) {
@@ -76,7 +55,6 @@ exports.uploadMusic = async (req, res) => {
       success: true,
       data: music
     });
-    */
   } catch (error) {
     console.error('Erro ao fazer upload de música:', error);
     
@@ -134,39 +112,6 @@ exports.getMusicsByRadio = async (req, res) => {
   try {
     const { radioId } = req.params;
 
-    // Modo offline - retornar dados de exemplo
-    const exampleMusics = [
-      {
-        id: 1,
-        title: "Música Exemplo 1",
-        artist: "Artista de Teste",
-        filePath: "/uploads/music/exemplo1.mp3",
-        duration: 240,
-        radioId: radioId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: 2,
-        title: "Música Exemplo 2",
-        artist: "Outro Artista",
-        filePath: "/uploads/music/exemplo2.mp3",
-        duration: 180,
-        radioId: radioId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-
-    res.status(200).json({
-      success: true,
-      count: exampleMusics.length,
-      data: exampleMusics
-    });
-    
-    return;
-    
-    /* Código original comentado
     // Verificar se a rádio pertence ao usuário
     const isOwner = await checkRadioOwnership(radioId, req.user.id);
     if (!isOwner) {
@@ -184,7 +129,6 @@ exports.getMusicsByRadio = async (req, res) => {
       count: music.length,
       data: music
     });
-    */
   } catch (error) {
     console.error('Erro ao buscar músicas:', error);
     res.status(500).json({ message: 'Erro no servidor', error: error.message });

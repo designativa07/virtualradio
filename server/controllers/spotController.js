@@ -28,30 +28,6 @@ exports.uploadSpot = async (req, res) => {
       return res.status(400).json({ message: 'Nenhum arquivo foi enviado.' });
     }
 
-    // Modo offline - criar spot de exemplo
-    const exampleSpot = {
-      id: Date.now(), // ID único baseado no timestamp
-      name: name || (req.file ? path.basename(req.file.originalname, path.extname(req.file.originalname)) : 'Spot Exemplo'),
-      description: description || 'Spot de exemplo para o modo offline',
-      filePath: req.file ? req.file.path : '/uploads/spot/exemplo_novo.mp3',
-      duration: Math.floor(Math.random() * (60 - 15 + 1) + 15),
-      isActive: true,
-      startDate: startDate || null,
-      endDate: endDate || null,
-      radioId: parseInt(radioId),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    // Responder com sucesso e dados de exemplo
-    res.status(201).json({
-      success: true,
-      data: exampleSpot
-    });
-    
-    return;
-    
-    /* Código original comentado
     // Verificar se a rádio pertence ao usuário
     const isOwner = await checkRadioOwnership(radioId, req.user.id);
     if (!isOwner) {
@@ -82,7 +58,6 @@ exports.uploadSpot = async (req, res) => {
       success: true,
       data: spot
     });
-    */
   } catch (error) {
     console.error('Erro ao fazer upload de spot:', error);
     
@@ -104,41 +79,6 @@ exports.getSpotsByRadio = async (req, res) => {
   try {
     const { radioId } = req.params;
 
-    // Modo offline - retornar dados de exemplo
-    const exampleSpots = [
-      {
-        id: 1,
-        name: "Spot Promocional",
-        description: "Um spot de teste para o modo offline",
-        filePath: "/uploads/spot/exemplo1.mp3",
-        duration: 30,
-        isActive: true,
-        radioId: parseInt(radioId),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: 2,
-        name: "Outro Spot",
-        description: "Mais um spot de exemplo",
-        filePath: "/uploads/spot/exemplo2.mp3",
-        duration: 20,
-        isActive: true,
-        radioId: parseInt(radioId),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-
-    res.status(200).json({
-      success: true,
-      count: exampleSpots.length,
-      data: exampleSpots
-    });
-    
-    return;
-    
-    /* Código original comentado
     // Verificar se a rádio pertence ao usuário
     const isOwner = await checkRadioOwnership(radioId, req.user.id);
     if (!isOwner) {
@@ -156,7 +96,6 @@ exports.getSpotsByRadio = async (req, res) => {
       count: spots.length,
       data: spots
     });
-    */
   } catch (error) {
     console.error('Erro ao buscar spots:', error);
     res.status(500).json({ message: 'Erro no servidor', error: error.message });

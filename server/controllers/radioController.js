@@ -5,34 +5,7 @@ exports.createRadio = async (req, res) => {
   try {
     const { name, description, spotInterval, musicVolume, spotVolume, fadeInDuration, fadeOutDuration, volumeTransitionDuration } = req.body;
     
-    // Modo offline - criar rádio de exemplo
-    const newRadio = {
-      id: Date.now(), // ID único baseado no timestamp
-      name: name || "Nova Rádio",
-      description: description || "",
-      spotInterval: spotInterval || 180,
-      musicVolume: musicVolume || 70,
-      spotVolume: spotVolume || 100,
-      fadeInDuration: fadeInDuration || 3,
-      fadeOutDuration: fadeOutDuration || 3,
-      volumeTransitionDuration: volumeTransitionDuration || 2,
-      userId: req.user.id,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    // Adicionar à lista global de rádios (que será criada se não existir)
-    global.offlineRadios = global.offlineRadios || [];
-    global.offlineRadios.push(newRadio);
-    
-    res.status(201).json({
-      success: true,
-      data: newRadio
-    });
-    
-    return;
-    
-    /* Código original comentado
+    // Criar nova rádio no banco de dados
     const radio = await Radio.create({
       name,
       description,
@@ -49,7 +22,6 @@ exports.createRadio = async (req, res) => {
       success: true,
       data: radio
     });
-    */
   } catch (error) {
     console.error('Erro ao criar rádio:', error);
     res.status(500).json({ message: 'Erro no servidor', error: error.message });
@@ -59,37 +31,6 @@ exports.createRadio = async (req, res) => {
 // Obter todas as rádios do usuário
 exports.getUserRadios = async (req, res) => {
   try {
-    // Modo offline - usar rádios adicionadas globalmente ou retornar um exemplo se vazio
-    // Inicializar a lista global se não existir
-    global.offlineRadios = global.offlineRadios || [
-      {
-        id: 1,
-        name: "Minha Rádio Exemplo",
-        description: "Uma rádio de teste para modo offline",
-        spotInterval: 180,
-        musicVolume: 70,
-        spotVolume: 100,
-        fadeInDuration: 3,
-        fadeOutDuration: 3,
-        volumeTransitionDuration: 2,
-        userId: req.user.id,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-    
-    // Retornar apenas rádios do usuário atual
-    const userRadios = global.offlineRadios.filter(radio => radio.userId === req.user.id);
-    
-    res.status(200).json({
-      success: true,
-      count: userRadios.length,
-      data: userRadios
-    });
-    
-    return;
-    
-    /* Código original comentado
     const radios = await Radio.findAll({
       where: { userId: req.user.id },
       order: [['createdAt', 'DESC']]
@@ -100,7 +41,6 @@ exports.getUserRadios = async (req, res) => {
       count: radios.length,
       data: radios
     });
-    */
   } catch (error) {
     console.error('Erro ao buscar rádios:', error);
     res.status(500).json({ message: 'Erro no servidor', error: error.message });
@@ -112,59 +52,6 @@ exports.getRadio = async (req, res) => {
   try {
     const radioId = req.params.id;
     
-    // Modo offline - retornar dados de exemplo com músicas e spots
-    const exampleRadio = {
-      id: parseInt(radioId),
-      name: "Minha Rádio Exemplo",
-      description: "Uma rádio de teste para modo offline",
-      spotInterval: 180,
-      musicVolume: 70,
-      spotVolume: 100,
-      fadeInDuration: 3,
-      fadeOutDuration: 3,
-      volumeTransitionDuration: 2,
-      userId: req.user.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      Music: [
-        {
-          id: 1,
-          title: "Música Exemplo 1",
-          artist: "Artista de Teste",
-          filePath: "/uploads/music/exemplo1.mp3",
-          duration: 240,
-          radioId: parseInt(radioId)
-        },
-        {
-          id: 2,
-          title: "Música Exemplo 2",
-          artist: "Outro Artista",
-          filePath: "/uploads/music/exemplo2.mp3",
-          duration: 180,
-          radioId: parseInt(radioId)
-        }
-      ],
-      Spots: [
-        {
-          id: 1,
-          name: "Spot Promocional",
-          description: "Um spot de teste",
-          filePath: "/uploads/spot/exemplo1.mp3",
-          duration: 30,
-          isActive: true,
-          radioId: parseInt(radioId)
-        }
-      ]
-    };
-    
-    res.status(200).json({
-      success: true,
-      data: exampleRadio
-    });
-    
-    return;
-    
-    /* Código original comentado
     const radio = await Radio.findOne({
       where: { 
         id: radioId,
@@ -184,7 +71,6 @@ exports.getRadio = async (req, res) => {
       success: true,
       data: radio
     });
-    */
   } catch (error) {
     console.error('Erro ao buscar rádio:', error);
     res.status(500).json({ message: 'Erro no servidor', error: error.message });

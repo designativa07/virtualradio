@@ -1,8 +1,14 @@
+// DESATIVAÇÃO DO MODO OFFLINE
+// Este arquivo foi modificado para garantir que não há modo offline
+// Data: 04/05/2025
+
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const Radio = require('./Radio');
 
-// Definição do modelo Music
+console.log('Carregando modelo Music (modo online)');
+
+// Definição do modelo Music - APENAS MODO ONLINE
 const Music = sequelize.define('Music', {
   id: {
     type: DataTypes.INTEGER,

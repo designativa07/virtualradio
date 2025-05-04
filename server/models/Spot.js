@@ -1,8 +1,14 @@
+// DESATIVAÇÃO DO MODO OFFLINE
+// Este arquivo foi modificado para garantir que não há modo offline
+// Data: 04/05/2025
+
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const Radio = require('./Radio');
 
-// Definição do modelo Spot
+console.log('Carregando modelo Spot (modo online)');
+
+// Definição do modelo Spot - APENAS MODO ONLINE
 const Spot = sequelize.define('Spot', {
   id: {
     type: DataTypes.INTEGER,

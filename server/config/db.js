@@ -1,8 +1,16 @@
+// DESATIVAÇÃO DO MODO OFFLINE
+// Este arquivo foi modificado para garantir que não há modo offline
+// Data: 04/05/2025
+
 const { Sequelize } = require('sequelize');
+
+console.log('Inicializando conexão com banco de dados (modo online)');
+console.log('============= DETALHES DA CONEXÃO DB =============');
 
 // Tenta carregar as variáveis de ambiente, se existirem
 try {
   require('dotenv').config();
+  console.log('Arquivo .env carregado');
 } catch (err) {
   console.log('Arquivo .env não encontrado, usando valores padrão');
 }
@@ -16,6 +24,9 @@ const DB_CONFIG = {
   port: process.env.DB_PORT || 3306,
   dialect: 'mysql'
 };
+
+// Log de configuração do banco de dados (sem mostrar a senha)
+console.log(`Database: ${DB_CONFIG.dialect}://${DB_CONFIG.user}@${DB_CONFIG.host}:${DB_CONFIG.port}/${DB_CONFIG.name}`);
 
 // Configuração do banco de dados usando variáveis de ambiente ou valores padrão
 const sequelize = new Sequelize(
@@ -32,22 +43,29 @@ const sequelize = new Sequelize(
       min: 0,
       acquire: 30000,
       idle: 10000
+    },
+    // Configuração adicional para tentar novamente em caso de falha
+    retry: {
+      max: 3,
+      timeout: 5000
     }
   }
 );
 
-// Testar a conexão
-const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Conexão com o banco de dados estabelecida com sucesso.');
-  } catch (error) {
-    console.error('Não foi possível conectar ao banco de dados:', error);
-    console.log('Tentando operar no modo offline (sem persistência)');
-  }
-};
+// Teste de conexão
+sequelize.authenticate()
+  .then(() => {
+    console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
+    console.log('============= FIM DOS DETALHES DB =============');
+  })
+  .catch(err => {
+    console.error('❌ Erro ao conectar ao banco de dados:', err.message);
+    console.error('Detalhes do erro:', err);
+    console.error('* NÃO entrando em modo offline!');
+    console.error('============= FIM DOS DETALHES DB =============');
+  });
 
-// Testa a conexão, mas não encerra o processo em caso de falha
-testConnection();
+// Exportar a instância do sequelize
+module.exports = sequelize;
 
-module.exports = sequelize; 
+// Testa a conexão, mas NÃO entra em modo offline em caso de falha 

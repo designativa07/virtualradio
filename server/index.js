@@ -1,13 +1,10 @@
+// Importações e configurações normais
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
-
-// Carregar e executar diagnóstico de modo
-const debug = require('./config/debugMode');
-debug.disableOfflineMode(); // Forçar o modo online
 
 // Importar modelos e sincronizar com o banco de dados
 const { syncModels } = require('./models');
