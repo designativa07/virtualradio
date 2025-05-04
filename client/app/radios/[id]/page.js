@@ -1,3 +1,14 @@
+export async function generateStaticParams() {
+  // This is only for build time to create the static export
+  // During runtime, the client-side code will handle the actual data fetching
+  return [
+    { id: '1' },
+    { id: '2' },
+    { id: '3' },
+    // Add more if needed, or fetch from API if available at build time
+  ];
+}
+
 'use client';
 
 import { useState, useEffect } from 'react';
