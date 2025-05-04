@@ -4,14 +4,20 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-// Função para obter a URL base da API (mesma do login)
+// Função para obter a URL base da API
 const getApiUrl = () => {
-  // Em desenvolvimento, usamos localhost:3000
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3000';
+  // Detectar ambiente e usar a origem apropriada
+  if (typeof window !== 'undefined') {
+    // Em desenvolvimento local, usar o localhost:3000
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3000';
+    }
+    
+    // Em ambiente de produção, usar a origem atual
+    return window.location.origin;
   }
   
-  // Em produção, usamos a mesma origem
+  // Fallback
   return '';
 };
 
@@ -22,14 +28,13 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   useEffect(() => {
-    // Desativar a verificação de autenticação em aplicações estáticas
-    // para evitar erros 401. O usuário terá que fazer login explicitamente.
-    setIsLoading(false);
-    
-    /*
+    // Verificar autenticação para mostrar o estado de login correto
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${getApiUrl()}/api/auth/me`);
+        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
+          credentials: 'include', // Importante: envia cookies com a requisição
+        });
+        
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
@@ -42,13 +47,13 @@ export default function Navbar() {
     };
     
     checkAuth();
-    */
   }, []);
   
   const handleLogout = async () => {
     try {
       const response = await fetch(`${getApiUrl()}/api/auth/logout`, {
         method: 'POST',
+        credentials: 'include', // Importante: envia cookies com a requisição
       });
       
       if (response.ok) {

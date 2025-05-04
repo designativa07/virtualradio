@@ -3,6 +3,23 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+// Função para obter a URL base da API
+const getApiUrl = () => {
+  // Detectar ambiente e usar a origem apropriada
+  if (typeof window !== 'undefined') {
+    // Em desenvolvimento local, usar o localhost:3000
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3000';
+    }
+    
+    // Em ambiente de produção, usar a origem atual
+    return window.location.origin;
+  }
+  
+  // Fallback
+  return '';
+};
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -11,7 +28,10 @@ export default function Home() {
     // Check if user is logged in
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me');
+        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
+          credentials: 'include', // Importante: envia cookies com a requisição
+        });
+        
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
