@@ -8,11 +8,15 @@ import { useForm } from 'react-hook-form';
 // Função para obter a URL base da API
 const getApiUrl = () => {
   // Em desenvolvimento, usamos localhost:3000
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3000';
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3000';
+    }
+    // Em produção, usamos a mesma origem com protocolo e host
+    return window.location.origin;
   }
   
-  // Em produção, usamos a mesma origem
+  // Fallback para string vazia (será relativo ao domínio atual)
   return '';
 };
 
