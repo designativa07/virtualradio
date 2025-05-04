@@ -20,6 +20,30 @@ console.log('Environment variables loaded:', {
   SESSION_SECRET: process.env.SESSION_SECRET ? '✓ Set' : '✗ Not set',
 });
 
+// Tratar sinais de encerramento do processo para shutdown gracioso
+process.on('SIGTERM', () => {
+  console.log('SIGTERM recebido, encerrando o servidor graciosamente...');
+  // Aguardar 5 segundos antes de encerrar para permitir logs
+  setTimeout(() => process.exit(0), 5000);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT recebido, encerrando o servidor graciosamente...');
+  // Aguardar 5 segundos antes de encerrar para permitir logs
+  setTimeout(() => process.exit(0), 5000);
+});
+
+// Capturar exceções não tratadas
+process.on('uncaughtException', (error) => {
+  console.error('Exceção não tratada:', error);
+  // Não encerrar o processo, tentar continuar
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Promessa rejeitada não tratada:', reason);
+  // Não encerrar o processo, tentar continuar
+});
+
 // Configuração principal do servidor
 async function setupServer() {
   const app = express();
@@ -61,6 +85,38 @@ async function setupServer() {
     });
   });
 
+  // API básica de verificação de estado (healthcheck)
+  app.get('/health', (req, res) => {
+    res.json({ 
+      status: 'online', 
+      uptime: process.uptime() 
+    });
+  });
+
+  // Login de admin simplificado que não depende de banco de dados
+  app.post('/api/auth/login-fallback', (req, res) => {
+    const { email, password } = req.body;
+    
+    if (email === 'admin' && password === 'admin123') {
+      req.session.user = {
+        id: 0,
+        username: 'Admin',
+        email: 'admin',
+        role: 'admin'
+      };
+      return res.json({ 
+        message: 'Login bem-sucedido (modo fallback)',
+        user: req.session.user,
+        mode: 'fallback'
+      });
+    } else {
+      return res.status(401).json({ 
+        message: 'Credenciais inválidas',
+        fallbackCredentials: 'Use admin/admin123'
+      });
+    }
+  });
+
   // Set up error handling for missing routes/DB issues
   app.use((err, req, res, next) => {
     console.error('Server error:', err);
@@ -81,15 +137,35 @@ async function setupServer() {
       console.log('API routes loaded successfully');
     } catch (err) {
       console.error('Error loading API routes:', err);
-      app.use('/api/auth', (req, res) => res.status(500).json({ error: 'Authentication service unavailable' }));
-      app.use('/api/admin', (req, res) => res.status(500).json({ error: 'Admin service unavailable' }));
-      app.use('/api/radio', (req, res) => res.status(500).json({ error: 'Radio service unavailable' }));
-      app.use('/api/audio', (req, res) => res.status(500).json({ error: 'Audio service unavailable' }));
+      app.use('/api/auth', (req, res, next) => {
+        if (req.path === '/login' && req.method === 'POST') {
+          const { email, password } = req.body;
+          
+          if (email === 'admin' && password === 'admin123') {
+            req.session.user = {
+              id: 0,
+              username: 'Admin',
+              email: 'admin',
+              role: 'admin'
+            };
+            return res.json({ 
+              message: 'Login bem-sucedido (modo admin)',
+              user: req.session.user
+            });
+          }
+          return res.status(401).json({ message: 'Credenciais inválidas' });
+        }
+        res.status(503).json({ error: 'Serviço de autenticação indisponível' });
+      });
+      app.use('/api/admin', (req, res) => res.status(503).json({ error: 'Serviço de administração indisponível' }));
+      app.use('/api/radio', (req, res) => res.status(503).json({ error: 'Serviço de rádio indisponível' }));
+      app.use('/api/audio', (req, res) => res.status(503).json({ error: 'Serviço de áudio indisponível' }));
     }
 
     // Servir os arquivos estáticos do Next.js em produção
     if (process.env.NODE_ENV === 'production') {
       const nextPath = path.join(__dirname, '../client/.next');
+      const publicPath = path.join(__dirname, '../client/public');
       
       // Verifique se a pasta .next existe (build normal do Next.js)
       if (fs.existsSync(nextPath)) {
@@ -99,30 +175,75 @@ async function setupServer() {
         app.use('/_next', express.static(path.join(__dirname, '../client/.next')));
         
         // Também servir arquivos da pasta public
-        app.use(express.static(path.join(__dirname, '../client/public')));
+        if (fs.existsSync(publicPath)) {
+          app.use(express.static(publicPath));
+        }
+        
+        // Tentar inicializar o Next.js para SSR com tratamento de erros apropriado
+        let nextHandler = null;
         
         try {
           // Carregar o Next.js para lidar com as rotas não capturadas pelas APIs
           const next = require('next');
           const dev = process.env.NODE_ENV !== 'production';
-          const nextApp = next({ dev, dir: path.join(__dirname, '../client') });
-          const handle = nextApp.getRequestHandler();
-          
-          // Preparar o Next.js
-          console.log('Inicializando Next.js para SSR...');
-          await nextApp.prepare();
-          
-          // Deixar o Next.js lidar com todas as outras rotas
-          app.get('*', (req, res) => {
-            return handle(req, res);
+          const nextApp = next({ 
+            dev, 
+            dir: path.join(__dirname, '../client'),
+            conf: {
+              // Configuração mais segura para evitar problemas de memória
+              onDemandEntries: {
+                maxInactiveAge: 60 * 1000, // 1 minuto
+                pagesBufferLength: 2,
+              }
+            }
           });
           
-          console.log('Next.js integrado com sucesso');
+          // Preparar o Next.js com timeout para evitar deadlock
+          console.log('Inicializando Next.js para SSR...');
+          
+          // Set a timeout to avoid waiting indefinitely
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Next.js prepare timeout')), 30000); // 30 segundos
+          });
+          
+          // Race between Next.js prepare and timeout
+          const handlePromise = Promise.race([
+            nextApp.prepare(),
+            timeoutPromise
+          ]).then(() => {
+            console.log('Next.js inicializado com sucesso');
+            return nextApp.getRequestHandler();
+          }).catch(err => {
+            console.error('Erro ao inicializar Next.js:', err);
+            return null;
+          });
+          
+          // Esperar pela inicialização, mas com timeout
+          try {
+            nextHandler = await handlePromise;
+          } catch (err) {
+            console.error('Falha na inicialização do Next.js:', err);
+          }
+          
+          if (nextHandler) {
+            // Deixar o Next.js lidar com todas as outras rotas
+            app.get('*', (req, res) => {
+              return nextHandler(req, res);
+            });
+            console.log('Next.js integrado com sucesso');
+          } else {
+            throw new Error('Next.js handler não disponível');
+          }
         } catch (err) {
           console.error('Erro ao carregar o Next.js:', err);
           
           // Fallback simples se Next.js não puder ser carregado
           app.get('*', (req, res) => {
+            // Skip API routes
+            if (req.path.startsWith('/api/')) {
+              return next();
+            }
+            
             res.status(500).send(`
             <html>
               <head>
@@ -138,6 +259,7 @@ async function setupServer() {
                 <div class="box">
                   <p>Ocorreu um erro ao renderizar a aplicação. Tente novamente mais tarde ou contate o administrador.</p>
                   <p>A API do servidor ainda pode estar funcionando. <a href="/api/test">Testar API</a></p>
+                  <p>Para entrar no modo admin, use <a href="/api/auth/login-fallback">login alternativo</a> com admin/admin123</p>
                 </div>
               </body>
             </html>
@@ -167,6 +289,7 @@ async function setupServer() {
               <div class="box">
                 <p>A aplicação não foi encontrada ou não foi compilada corretamente.</p>
                 <p>A API do servidor ainda pode estar funcionando. <a href="/api/test">Testar API</a></p>
+                <p>Para entrar no modo admin, use <a href="/api/auth/login-fallback">login alternativo</a> com admin/admin123</p>
               </div>
             </body>
           </html>
@@ -200,6 +323,10 @@ async function setupServer() {
       }
     });
 
+    // Configurar keepalive para evitar problemas de conexão pendente
+    server.keepAliveTimeout = 65000; // 65 segundos
+    server.headersTimeout = 66000; // 66 segundos (deve ser maior que keepAliveTimeout)
+
     return server;
   } catch (err) {
     console.error('Critical error during server setup:', err);
@@ -211,5 +338,5 @@ async function setupServer() {
 setupServer().catch(err => {
   console.error('Erro fatal ao iniciar o servidor:', err);
   // Don't exit process immediately to allow logs to be written
-  setTimeout(() => process.exit(1), 1000);
+  setTimeout(() => process.exit(1), 3000);
 }); 
