@@ -5,14 +5,18 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 
+// Carregar e executar diagnóstico de modo
+const debug = require('./config/debugMode');
+debug.disableOfflineMode(); // Forçar o modo online
+
 // Importar modelos e sincronizar com o banco de dados
 const { syncModels } = require('./models');
 
 // Importar rotas
-const authRoutes = require('./routes/auth');
-const trackRoutes = require('./routes/tracks');
-const playlistRoutes = require('./routes/playlists');
-const userRoutes = require('./routes/users');
+const authRoutes = require('./routes/authRoutes');
+const radioRoutes = require('./routes/radioRoutes');
+const musicRoutes = require('./routes/musicRoutes');
+const spotRoutes = require('./routes/spotRoutes');
 
 // Criar aplicação Express
 const app = express();
@@ -65,9 +69,9 @@ app.use('/admin', express.static(path.join(__dirname, '../admin')));
 
 // Configurar rotas da API
 app.use('/api/auth', authRoutes);
-app.use('/api/tracks', trackRoutes);
-app.use('/api/playlists', playlistRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/radios', radioRoutes);
+app.use('/api/music', musicRoutes);
+app.use('/api/spots', spotRoutes);
 
 // Rota principal - Servir a página HTML principal
 app.get('/', (req, res) => {
