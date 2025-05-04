@@ -1,9 +1,15 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { User } = require('../models');
-require('dotenv').config();
 
-// Configuração do JWT usando variáveis de ambiente
+// Tenta carregar as variáveis de ambiente, se existirem
+try {
+  require('dotenv').config();
+} catch (err) {
+  console.log('Arquivo .env não encontrado, usando valores padrão');
+}
+
+// Configuração do JWT usando variáveis de ambiente ou valores padrão
 const JWT_SECRET = process.env.JWT_SECRET || 'myradio_secret_key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
 

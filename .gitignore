@@ -7,6 +7,9 @@ admin/node_modules/
 .env
 .env.local
 .env.*.local
+.env.development
+.env.test
+.env.production
 
 # Build files
 client/build/
@@ -38,4 +41,15 @@ server/uploads/*
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Pnp
+.pnp/
+.pnp.js
+
+# Arquivos de configuração específicos dos usuários
+.npmrc
+.yarnrc
+
+# Arquivos de cache
+/.cache 

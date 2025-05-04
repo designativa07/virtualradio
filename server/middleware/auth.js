@@ -1,8 +1,14 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
-require('dotenv').config();
 
-// Configuração do JWT usando variáveis de ambiente
+// Tenta carregar as variáveis de ambiente, se existirem
+try {
+  require('dotenv').config();
+} catch (err) {
+  console.log('Arquivo .env não encontrado, usando valores padrão');
+}
+
+// Configuração do JWT usando variáveis de ambiente ou valores padrão
 const JWT_SECRET = process.env.JWT_SECRET || 'myradio_secret_key';
 
 // Middleware para proteger rotas que requerem autenticação
