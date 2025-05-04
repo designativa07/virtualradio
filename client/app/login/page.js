@@ -7,17 +7,23 @@ import { useForm } from 'react-hook-form';
 
 // Função para obter a URL base da API
 const getApiUrl = () => {
-  // Em desenvolvimento, usamos localhost:3000
+  // Forçar uso do servidor local para testes
   if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost') {
-      return 'http://localhost:3000';
-    }
+    // Comentado temporariamente para forçar uso local
+    // if (window.location.hostname === 'localhost') {
+    //   return 'http://localhost:3000';
+    // }
     // Em produção, usamos a mesma origem com protocolo e host
-    return window.location.origin;
+    // return window.location.origin;
+    
+    // TEMPORÁRIO: Forçar uso do servidor local para testes
+    return window.location.hostname === 'localhost' 
+      ? 'http://localhost:3000' 
+      : 'http://localhost:3000';
   }
   
-  // Fallback para string vazia (será relativo ao domínio atual)
-  return '';
+  // Fallback para url local
+  return 'http://localhost:3000';
 };
 
 export default function Login() {
@@ -30,13 +36,18 @@ export default function Login() {
   // Tentar autenticar com as credenciais padrão se houver problemas de banco de dados
   const tryFallbackLogin = async (data) => {
     try {
-      const response = await fetch(`${getApiUrl()}/api/auth/login-fallback`, {
+      const fallbackUrl = `${getApiUrl()}/api/auth/login-fallback`;
+      console.log('Tentando login fallback em:', fallbackUrl);
+      
+      const response = await fetch(fallbackUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
+      
+      console.log('Status da resposta fallback:', response.status);
       
       if (response.ok) {
         const result = await response.json();
@@ -45,9 +56,17 @@ export default function Login() {
         return true;
       }
       
+      // Tentar ler a resposta de erro
+      try {
+        const errorData = await response.json();
+        console.log('Erro no fallback login:', errorData);
+      } catch (e) {
+        console.log('Não foi possível ler resposta de erro do fallback');
+      }
+      
       return false;
     } catch (error) {
-      console.error('Fallback login error:', error);
+      console.error('Erro no fallback login:', error);
       return false;
     }
   };
@@ -57,7 +76,12 @@ export default function Login() {
     setError('');
     
     try {
-      const response = await fetch(`${getApiUrl()}/api/auth/login`, {
+      // Log para debug
+      const apiUrl = `${getApiUrl()}/api/auth/login`;
+      console.log('Tentando login em:', apiUrl);
+      console.log('Dados:', data);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,14 +89,24 @@ export default function Login() {
         body: JSON.stringify(data),
       });
       
+      console.log('Status da resposta:', response.status);
+      
       // Se a resposta for 503 (serviço indisponível), tente o login de fallback
-      if (response.status === 503 || response.status === 500) {
+      if (response.status === 503 || response.status === 500 || response.status === 400) {
+        console.log('Tentando login fallback devido ao status:', response.status);
         if (await tryFallbackLogin(data)) {
           return;
         }
       }
       
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+        console.log('Resposta:', result);
+      } catch (e) {
+        console.error('Erro ao processar JSON da resposta:', e);
+        result = { message: 'Erro ao processar resposta do servidor' };
+      }
       
       if (!response.ok) {
         setError(result.message || 'Login failed');
@@ -86,11 +120,12 @@ export default function Login() {
       
       // Se houver um erro na chamada regular, tente o fallback 
       // (especialmente útil se o banco de dados estiver indisponível)
+      console.log('Tentando login fallback após erro');
       if (await tryFallbackLogin(data)) {
         return;
       }
       
-      setError('An error occurred. Please try again. You can try using admin/admin123 if database is unavailable.');
+      setError(`Erro: ${error.message}. Tente admin@admin.com / admin123 se o banco de dados estiver indisponível.`);
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +191,7 @@ export default function Login() {
         </form>
         
         <div className="mt-4 text-center text-sm">
-          <p>Default credentials: admin / admin123</p>
+          <p>Default credentials: admin@admin.com / admin123</p>
         </div>
         
         <div className="mt-6 text-center">
