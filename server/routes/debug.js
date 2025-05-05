@@ -212,4 +212,58 @@ router.get('/env', (req, res) => {
   });
 });
 
+// Mock single radio endpoint that doesn't need database
+router.get('/mock-radio/:id', verifyToken, (req, res) => {
+  const radioId = req.params.id;
+  console.log('Debug: Fetching mock radio with ID:', radioId);
+  
+  // Generate a mock radio detail
+  const mockRadio = {
+    id: parseInt(radioId),
+    name: `Mock Radio ${radioId}`,
+    description: `This is a mock radio for debugging with ID ${radioId}`,
+    admin_id: req.user.id,
+    admin_username: req.user.username || 'Admin',
+    created_at: new Date().toISOString()
+  };
+  
+  res.json({ radio: mockRadio });
+});
+
+// Mock audio files for a radio
+router.get('/mock-audio/radio/:radioId', verifyToken, (req, res) => {
+  const radioId = req.params.radioId;
+  console.log('Debug: Fetching mock audio files for radio ID:', radioId);
+  
+  // Generate mock audio files
+  const mockFiles = [
+    {
+      id: 1001,
+      radio_id: parseInt(radioId),
+      title: 'Mock Song 1',
+      type: 'music',
+      file_path: 'uploads/mock/music-file-1.mp3',
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 1002,
+      radio_id: parseInt(radioId),
+      title: 'Mock Commercial',
+      type: 'spot',
+      file_path: 'uploads/mock/spot-file-1.mp3',
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 1003,
+      radio_id: parseInt(radioId),
+      title: 'Mock Song 2',
+      type: 'music',
+      file_path: 'uploads/mock/music-file-2.mp3',
+      created_at: new Date().toISOString()
+    }
+  ];
+  
+  res.json({ files: mockFiles });
+});
+
 module.exports = router; 

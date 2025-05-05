@@ -33,6 +33,7 @@ export default function RadioDetail({ params }) {
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
   const [selectedAudio, setSelectedAudio] = useState(null);
+  const [usingMockData, setUsingMockData] = useState(false);
 
   useEffect(() => {
     // Check authentication
@@ -80,19 +81,44 @@ export default function RadioDetail({ params }) {
         return;
       }
       
-      const response = await fetch(`${getApiUrl()}/api/radio/${radioId}`, {
+      // First try the real endpoint
+      try {
+        console.log('Fetching radio from real endpoint...');
+        const response = await fetch(`${getApiUrl()}/api/radio/${radioId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setRadio(data.radio);
+          setUsingMockData(false);
+          return;
+        } else {
+          console.error('Real endpoint failed with status:', response.status);
+          // Continue to fallback
+        }
+      } catch (err) {
+        console.error('Error fetching from real endpoint:', err);
+        // Continue to fallback
+      }
+      
+      // If real endpoint fails, try mock endpoint
+      console.log('Trying fallback mock endpoint for radio details...');
+      const mockResponse = await fetch(`${getApiUrl()}/api/debug/mock-radio/${radioId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
-      if (!response.ok) {
-        setError('Radio not found');
-        return;
+      if (mockResponse.ok) {
+        const mockData = await mockResponse.json();
+        setRadio(mockData.radio);
+        setUsingMockData(true);
+      } else {
+        setError('Failed to load radio. Database connection issue detected.');
       }
-      
-      const data = await response.json();
-      setRadio(data.radio);
     } catch (error) {
       console.error('Error fetching radio:', error);
       setError('Failed to load radio information');
@@ -109,15 +135,42 @@ export default function RadioDetail({ params }) {
         return;
       }
       
-      const response = await fetch(`${getApiUrl()}/api/audio/radio/${radioId}`, {
+      // First try the real endpoint
+      try {
+        console.log('Fetching audio files from real endpoint...');
+        const response = await fetch(`${getApiUrl()}/api/audio/radio/${radioId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setAudioFiles(data.files || []);
+          return;
+        } else {
+          console.error('Real audio endpoint failed with status:', response.status);
+          // Continue to fallback
+        }
+      } catch (err) {
+        console.error('Error fetching audio from real endpoint:', err);
+        // Continue to fallback
+      }
+      
+      // If real endpoint fails, try mock endpoint
+      console.log('Trying fallback mock endpoint for audio files...');
+      const mockResponse = await fetch(`${getApiUrl()}/api/debug/mock-audio/radio/${radioId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setAudioFiles(data.files || []);
+      if (mockResponse.ok) {
+        const mockData = await mockResponse.json();
+        setAudioFiles(mockData.files || []);
+        setUsingMockData(true);
+      } else {
+        console.error('Mock audio endpoint also failed');
       }
     } catch (error) {
       console.error('Error fetching audio files:', error);
@@ -130,6 +183,19 @@ export default function RadioDetail({ params }) {
   
   const handleAudioDelete = async (audioId) => {
     if (!confirm('Are you sure you want to delete this audio file?')) {
+      return;
+    }
+    
+    if (usingMockData) {
+      // In mock mode, just remove from the local state
+      setAudioFiles(audioFiles.filter(file => file.id !== audioId));
+      
+      // Clear selected audio if it was deleted
+      if (selectedAudio && selectedAudio.id === audioId) {
+        setSelectedAudio(null);
+      }
+      
+      alert('Mock delete successful. Note: This is in mock mode, so no actual deletion occurred.');
       return;
     }
     
@@ -190,9 +256,15 @@ export default function RadioDetail({ params }) {
   
   return (
     <div>
+      {usingMockData && (
+        <div className="mb-6 p-4 bg-yellow-100 text-yellow-700 rounded-md">
+          <p>⚠️ Using mock data due to database connection issues. Changes you make will not be permanently saved.</p>
+        </div>
+      )}
+      
       <div className="flex items-center mb-8">
-        <Link href="/dashboard" className="text-primary hover:underline mr-4">
-          ← Back to Dashboard
+        <Link href="/radios" className="text-primary hover:underline mr-4">
+          ← Back to Radios
         </Link>
         <h1 className="text-3xl font-bold">{radio.name}</h1>
       </div>
