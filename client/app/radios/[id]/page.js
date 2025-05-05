@@ -6,6 +6,23 @@ import Link from 'next/link';
 import AudioPlayer from '../../../components/AudioPlayer';
 import AudioUploadForm from '../../../components/AudioUploadForm';
 
+// Função para obter a URL base da API
+const getApiUrl = () => {
+  // Detectar ambiente e usar a origem apropriada
+  if (typeof window !== 'undefined') {
+    // Em desenvolvimento local, usar o localhost:3000
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3000';
+    }
+    
+    // Em ambiente de produção, usar a origem atual
+    return window.location.origin;
+  }
+  
+  // Fallback
+  return '';
+};
+
 export default function RadioDetail({ params }) {
   const router = useRouter();
   const radioId = params.id;
@@ -21,7 +38,19 @@ export default function RadioDetail({ params }) {
     // Check authentication
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me');
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
+          router.push('/login');
+          return;
+        }
+        
+        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
         if (!response.ok) {
           router.push('/login');
           return;
@@ -44,7 +73,19 @@ export default function RadioDetail({ params }) {
   
   const fetchRadio = async () => {
     try {
-      const response = await fetch(`/api/radio/${radioId}`);
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+      
+      const response = await fetch(`${getApiUrl()}/api/radio/${radioId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
       if (!response.ok) {
         setError('Radio not found');
         return;
@@ -62,7 +103,18 @@ export default function RadioDetail({ params }) {
   
   const fetchAudioFiles = async () => {
     try {
-      const response = await fetch(`/api/audio/radio/${radioId}`);
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        return;
+      }
+      
+      const response = await fetch(`${getApiUrl()}/api/audio/radio/${radioId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
       if (response.ok) {
         const data = await response.json();
         setAudioFiles(data.files || []);
@@ -82,8 +134,17 @@ export default function RadioDetail({ params }) {
     }
     
     try {
-      const response = await fetch(`/api/audio/${audioId}`, {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        return;
+      }
+      
+      const response = await fetch(`${getApiUrl()}/api/audio/${audioId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (response.ok) {
@@ -105,7 +166,7 @@ export default function RadioDetail({ params }) {
   
   const isAdmin = () => {
     if (!user || !radio) return false;
-    return user.role === 'system_admin' || user.id === radio.admin_id;
+    return user.role === 'system_admin' || user.id === radio.admin_id || user.role === 'admin';
   };
   
   if (isLoading) {

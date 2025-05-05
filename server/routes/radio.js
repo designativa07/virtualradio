@@ -1,25 +1,45 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
+const jwt = require('jsonwebtoken');
 
-// Middleware
-const isAuthenticated = (req, res, next) => {
-  if (!req.session.user) {
+// JWT Secret
+const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
+
+// Middleware for JWT verification
+const verifyToken = (req, res, next) => {
+  // Get token from Authorization header
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  
+  if (!token) {
+    console.log('No token provided in radio route');
     return res.status(401).json({ message: 'Not authenticated' });
   }
-  next();
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error('Error verifying token in radio route:', error.message);
+    return res.status(401).json({ message: 'Invalid token' });
+  }
 };
 
+// Middleware
+const isAuthenticated = verifyToken;
+
 const isAdminOrSystemAdmin = (req, res, next) => {
-  if (!req.session.user) {
-    return res.status(401).json({ message: 'Not authenticated' });
-  }
-  
-  if (req.session.user.role !== 'radio_admin' && req.session.user.role !== 'system_admin') {
-    return res.status(403).json({ message: 'Access denied' });
-  }
-  
-  next();
+  // First verify the token
+  verifyToken(req, res, () => {
+    // Now check the user role from the decoded token
+    if (req.user.role !== 'radio_admin' && req.user.role !== 'system_admin' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    next();
+  });
 };
 
 // Get all radios
@@ -64,7 +84,7 @@ router.get('/:id', isAuthenticated, async (req, res) => {
 // Create a new radio
 router.post('/', isAdminOrSystemAdmin, async (req, res) => {
   const { name, description } = req.body;
-  const adminId = req.session.user.id;
+  const adminId = req.user.id; // Use JWT user data
   
   if (!name) {
     return res.status(400).json({ message: 'Radio name is required' });
@@ -90,7 +110,7 @@ router.post('/', isAdminOrSystemAdmin, async (req, res) => {
 router.put('/:id', isAdminOrSystemAdmin, async (req, res) => {
   const radioId = req.params.id;
   const { name, description } = req.body;
-  const userId = req.session.user.id;
+  const userId = req.user.id; // Use JWT user data
   
   try {
     // Check if the user is the radio admin or a system admin
@@ -105,7 +125,7 @@ router.put('/:id', isAdminOrSystemAdmin, async (req, res) => {
     
     const radio = radios[0];
     
-    if (req.session.user.role !== 'system_admin' && radio.admin_id !== userId) {
+    if (req.user.role !== 'system_admin' && req.user.role !== 'admin' && radio.admin_id !== userId) {
       return res.status(403).json({ message: 'Access denied' });
     }
     
@@ -124,7 +144,7 @@ router.put('/:id', isAdminOrSystemAdmin, async (req, res) => {
 // Delete a radio
 router.delete('/:id', isAdminOrSystemAdmin, async (req, res) => {
   const radioId = req.params.id;
-  const userId = req.session.user.id;
+  const userId = req.user.id; // Use JWT user data
   
   try {
     // Check if the user is the radio admin or a system admin
@@ -139,7 +159,7 @@ router.delete('/:id', isAdminOrSystemAdmin, async (req, res) => {
     
     const radio = radios[0];
     
-    if (req.session.user.role !== 'system_admin' && radio.admin_id !== userId) {
+    if (req.user.role !== 'system_admin' && req.user.role !== 'admin' && radio.admin_id !== userId) {
       return res.status(403).json({ message: 'Access denied' });
     }
     

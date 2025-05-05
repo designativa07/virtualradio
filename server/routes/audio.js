@@ -3,48 +3,67 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const db = require('../config/database');
+const jwt = require('jsonwebtoken');
 
-// Middleware
-const isAuthenticated = (req, res, next) => {
-  if (!req.session.user) {
-    return res.status(401).json({ message: 'Not authenticated' });
-  }
-  next();
-};
+// JWT Secret
+const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
 
-const isRadioAdmin = async (req, res, next) => {
-  if (!req.session.user) {
+// Middleware for JWT verification
+const verifyToken = (req, res, next) => {
+  // Get token from Authorization header
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  
+  if (!token) {
+    console.log('No token provided in audio route');
     return res.status(401).json({ message: 'Not authenticated' });
-  }
-  
-  // System admin has access to all radios
-  if (req.session.user.role === 'system_admin') {
-    return next();
-  }
-  
-  // Get radio ID from request
-  let radioId = req.params.radioId || req.body.radioId;
-  
-  if (!radioId) {
-    return res.status(400).json({ message: 'Radio ID is required' });
   }
   
   try {
-    // Check if user is the radio admin
-    const [radios] = await db.query(
-      'SELECT * FROM radios WHERE id = ? AND admin_id = ?',
-      [radioId, req.session.user.id]
-    );
-    
-    if (radios.length === 0) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
     next();
   } catch (error) {
-    console.error('Error checking radio admin:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error verifying token in audio route:', error.message);
+    return res.status(401).json({ message: 'Invalid token' });
   }
+};
+
+// Middleware
+const isAuthenticated = verifyToken;
+
+const isRadioAdmin = async (req, res, next) => {
+  // First verify the token
+  verifyToken(req, res, async () => {
+    // System admin has access to all radios
+    if (req.user.role === 'system_admin' || req.user.role === 'admin') {
+      return next();
+    }
+    
+    // Get radio ID from request
+    let radioId = req.params.radioId || req.body.radioId;
+    
+    if (!radioId) {
+      return res.status(400).json({ message: 'Radio ID is required' });
+    }
+    
+    try {
+      // Check if user is the radio admin
+      const [radios] = await db.query(
+        'SELECT * FROM radios WHERE id = ? AND admin_id = ?',
+        [radioId, req.user.id]
+      );
+      
+      if (radios.length === 0) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      next();
+    } catch (error) {
+      console.error('Error checking radio admin:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
 };
 
 // Get all audio files for a radio
@@ -127,10 +146,10 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
     const file = files[0];
     
     // Check permissions (only radio admin or system admin can delete)
-    if (req.session.user.role !== 'system_admin') {
+    if (req.user.role !== 'system_admin' && req.user.role !== 'admin') {
       const [radios] = await db.query(
         'SELECT * FROM radios WHERE id = ? AND admin_id = ?',
-        [file.radio_id, req.session.user.id]
+        [file.radio_id, req.user.id]
       );
       
       if (radios.length === 0) {

@@ -3,6 +3,23 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+// Função para obter a URL base da API
+const getApiUrl = () => {
+  // Detectar ambiente e usar a origem apropriada
+  if (typeof window !== 'undefined') {
+    // Em desenvolvimento local, usar o localhost:3000
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3000';
+    }
+    
+    // Em ambiente de produção, usar a origem atual
+    return window.location.origin;
+  }
+  
+  // Fallback
+  return '';
+};
+
 export default function AudioUploadForm({ radioId, onSuccess }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -15,14 +32,24 @@ export default function AudioUploadForm({ radioId, onSuccess }) {
     setError('');
     
     try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        return;
+      }
+      
       const formData = new FormData();
       formData.append('audio', data.audio[0]);
       formData.append('title', data.title);
       formData.append('type', data.type);
       formData.append('radioId', radioId);
       
-      const response = await fetch('/api/audio/upload', {
+      const response = await fetch(`${getApiUrl()}/api/audio/upload`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
       
