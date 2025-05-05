@@ -6,19 +6,8 @@ import { useRouter } from 'next/navigation';
 
 // Função para obter a URL base da API
 const getApiUrl = () => {
-  // Detectar ambiente e usar a origem apropriada
-  if (typeof window !== 'undefined') {
-    // Em desenvolvimento local, usar o localhost:3000
-    if (window.location.hostname === 'localhost') {
-      return 'http://localhost:3000';
-    }
-    
-    // Em ambiente de produção, usar a origem atual
-    return window.location.origin;
-  }
-  
-  // Fallback
-  return '';
+  // Forçar uso do localhost:3000
+  return 'http://localhost:3000';
 };
 
 export default function Navbar() {

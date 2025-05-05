@@ -6,13 +6,8 @@ import Link from 'next/link';
 
 // Function to get the API base URL
 const getApiUrl = () => {
-  if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost') {
-      return 'http://localhost:3000';
-    }
-    return window.location.origin;
-  }
-  return '';
+  // Forçar uso do localhost:3000
+  return 'http://localhost:3000';
 };
 
 export default function RadiosPage() {
