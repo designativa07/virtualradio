@@ -7,26 +7,8 @@ import { useForm } from 'react-hook-form';
 
 // Função para obter a URL base da API
 const getApiUrl = () => {
-  // Detectar ambiente e usar a origem apropriada
-  if (typeof window !== 'undefined') {
-    // Em desenvolvimento local, usar o localhost:3000
-    if (window.location.hostname === 'localhost') {
-      return 'http://localhost:3000';
-    }
-    
-    // Em ambiente de produção
-    // 1. Se estamos acessando via site-designativa-virutalradio.h4xd66.easypanel.host, 
-    // usamos esse mesmo endereço
-    if (window.location.hostname.includes('h4xd66.easypanel.host')) {
-      return window.location.origin;
-    }
-    
-    // 2. Caso contrário, tentamos o localhost
-    return 'http://localhost:3000';
-  }
-  
-  // Fallback
-  return '';
+  // Forçar uso do localhost:3000
+  return 'http://localhost:3000';
 };
 
 export default function Login() {

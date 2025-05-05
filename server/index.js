@@ -51,7 +51,10 @@ async function setupServer() {
 
   // Middleware
   app.use(cors({
-    origin: ['http://localhost:3000', 'https://site-designativa-virutalradio.h4xd66.easypanel.host'],
+    origin: function(origin, callback) {
+      // Permitir qualquer origem, inclusive chamadas locais
+      return callback(null, true);
+    },
     credentials: true  // Importante: Permite envio de cookies em requisições CORS
   }));
   app.use(express.json());

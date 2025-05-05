@@ -38,7 +38,15 @@ body {
   }
 
   .form-input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-gray-900 dark:text-white dark:bg-slate-700 dark:border-slate-600;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary;
+    color: black !important; 
+    background-color: white !important;
+  }
+  
+  .dark .form-input {
+    color: white !important;
+    background-color: #334155 !important;
+    border-color: #475569 !important;
   }
   
   .form-label {

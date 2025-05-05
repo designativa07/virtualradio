@@ -14,8 +14,10 @@ const verifyToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
   
   if (!token) {
-    console.log('No token provided in admin route');
-    return res.status(401).json({ message: 'Not authenticated' });
+    return res.status(401).json({ 
+      message: 'Not authenticated',
+      error: 'No token provided' 
+    });
   }
   
   try {
@@ -23,8 +25,10 @@ const verifyToken = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error('Error verifying token in admin route:', error.message);
-    return res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ 
+      message: 'Invalid token',
+      error: error.message 
+    });
   }
 };
 
@@ -39,6 +43,15 @@ const isSystemAdmin = (req, res, next) => {
     
     next();
   });
+};
+
+// Middleware para verificar se o usuário é um admin
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Acesso não autorizado' });
+  }
 };
 
 // Get all users
@@ -104,6 +117,41 @@ router.delete('/users/:id', isSystemAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Nova rota pública para criar usuário admin se não existir
+router.get('/setup-admin', async (req, res) => {
+  try {
+    // Verificar se já existe um admin
+    const [admins] = await db.query('SELECT COUNT(*) as count FROM users WHERE role = ?', ['admin']);
+    
+    if (admins[0].count > 0) {
+      return res.json({ 
+        message: 'Um administrador já existe no sistema',
+        success: false 
+      });
+    }
+    
+    // Criar admin se não existir
+    await db.query(
+      'INSERT INTO users (username, email, password, role, created_at) VALUES (?, ?, SHA2(?, 256), ?, NOW())',
+      ['Admin', 'admin@virtualradio.com', 'admin123', 'admin']
+    );
+    
+    res.json({ 
+      message: 'Administrador criado com sucesso',
+      email: 'admin@virtualradio.com',
+      password: 'admin123',
+      success: true
+    });
+  } catch (error) {
+    console.error('Erro ao configurar admin:', error);
+    res.status(500).json({ 
+      message: 'Erro ao configurar admin',
+      error: error.message,
+      success: false
+    });
   }
 });
 
