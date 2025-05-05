@@ -115,6 +115,34 @@ router.get('/mock-radios', verifyToken, (req, res) => {
   res.json({ radios: mockRadios });
 });
 
+// Mock radio creation endpoint that doesn't need database
+router.post('/mock-radio', verifyToken, (req, res) => {
+  console.log('Debug: Creating mock radio with data:', req.body);
+  
+  const { name, description } = req.body;
+  
+  if (!name) {
+    return res.status(400).json({ message: 'Radio name is required' });
+  }
+  
+  // Generate a mock success response for radio creation
+  const mockRadioId = Math.floor(Math.random() * 1000) + 100; // Random ID between 100-1100
+  
+  res.status(201).json({
+    message: 'Radio created successfully (mock)',
+    radioId: mockRadioId,
+    mockData: true,
+    radio: {
+      id: mockRadioId,
+      name: name,
+      description: description || '',
+      admin_id: req.user.id,
+      admin_username: req.user.username || 'Admin',
+      created_at: new Date().toISOString()
+    }
+  });
+});
+
 // Add a debugging logs endpoint
 router.get('/logs', (req, res) => {
   const logPath = path.join(__dirname, '../../logs');

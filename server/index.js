@@ -109,6 +109,42 @@ async function setupServer() {
     });
   });
 
+  // Direct database status check route
+  app.get('/db-status', async (req, res) => {
+    try {
+      const db = require('./config/database');
+      
+      // Try to get a connection
+      try {
+        const connection = await db.getConnection();
+        connection.release();
+        
+        res.json({
+          status: 'ok',
+          message: 'Database connection successful'
+        });
+      } catch (dbError) {
+        console.error('Database connection test failed:', dbError);
+        
+        // Return detailed error info
+        res.status(503).json({
+          status: 'error',
+          message: 'Database connection failed',
+          error: dbError.message,
+          code: dbError.code || 'UNKNOWN',
+          stack: process.env.NODE_ENV === 'development' ? dbError.stack : undefined
+        });
+      }
+    } catch (err) {
+      console.error('Error importing database module:', err);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to initialize database module',
+        error: err.message
+      });
+    }
+  });
+
   // Load debug routes early to ensure they're always available
   try {
     app.use('/api/debug', require('./routes/debug'));

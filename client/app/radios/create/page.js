@@ -21,6 +21,7 @@ export default function CreateRadioPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
+  const [usingMockData, setUsingMockData] = useState(false);
   
   const { register, handleSubmit, formState: { errors } } = useForm();
   
@@ -74,7 +75,39 @@ export default function CreateRadioPage() {
         return;
       }
       
-      const response = await fetch(`${getApiUrl()}/api/radio`, {
+      // First try the real endpoint
+      try {
+        console.log('Creating radio using real endpoint...');
+        const response = await fetch(`${getApiUrl()}/api/radio`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(data),
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          // Redirect to the new radio page
+          if (result.radioId) {
+            router.push(`/radios/${result.radioId}`);
+          } else {
+            router.push('/radios');
+          }
+          return;
+        } else {
+          console.error('Real endpoint failed with status:', response.status);
+          // Continue to fallback
+        }
+      } catch (err) {
+        console.error('Error using real endpoint:', err);
+        // Continue to fallback
+      }
+      
+      // If real endpoint failed, try mock endpoint
+      console.log('Trying fallback mock endpoint for radio creation...');
+      const mockResponse = await fetch(`${getApiUrl()}/api/debug/mock-radio`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,18 +116,19 @@ export default function CreateRadioPage() {
         body: JSON.stringify(data),
       });
       
-      const result = await response.json();
-      
-      if (!response.ok) {
-        setError(result.message || 'Failed to create radio');
-        return;
-      }
-      
-      // Redirect to the new radio page
-      if (result.radioId) {
-        router.push(`/radios/${result.radioId}`);
+      if (mockResponse.ok) {
+        const mockResult = await mockResponse.json();
+        setUsingMockData(true);
+        
+        // Show mock data warning and redirect after delay
+        setError('Radio created in mock mode due to database issues. The data will not be permanently saved.');
+        
+        // After 3 seconds, redirect to radios list
+        setTimeout(() => {
+          router.push('/radios');
+        }, 3000);
       } else {
-        router.push('/radios');
+        setError('Failed to create radio. Both normal and fallback endpoints failed.');
       }
     } catch (error) {
       console.error('Error creating radio:', error);
@@ -114,6 +148,12 @@ export default function CreateRadioPage() {
       </div>
       
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 max-w-2xl mx-auto">
+        {usingMockData && (
+          <div className="mb-6 p-4 bg-yellow-100 text-yellow-700 rounded-md">
+            <p>⚠️ Using mock mode due to database connection issues. This radio will not be permanently saved.</p>
+          </div>
+        )}
+        
         {error && (
           <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-md">
             {error}
