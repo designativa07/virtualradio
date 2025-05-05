@@ -84,6 +84,22 @@ async function setupServer() {
   // Servir uploads
   app.use('/uploads', express.static(uploadsDir));
 
+  // Serve favicon directly to prevent 500 errors
+  app.get('/favicon.ico', (req, res) => {
+    // Return a simple transparent favicon to avoid errors
+    const faviconPath = path.join(__dirname, 'assets', 'favicon.ico');
+    
+    // Check if favicon exists in assets, if not return a transparent 1x1 pixel
+    if (fs.existsSync(faviconPath)) {
+      res.sendFile(faviconPath);
+    } else {
+      // Create a 1x1 transparent pixel as base64 data URI
+      const transparentPixel = Buffer.from('AAABAAEAAQEAAAEAGAAwAAAAFgAAACgAAAABAAAAAgAAAAEAGAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wAAAAA=', 'base64');
+      res.setHeader('Content-Type', 'image/x-icon');
+      res.send(transparentPixel);
+    }
+  });
+
   // Test route that doesn't require database
   app.get('/api/test', (req, res) => {
     res.json({ 
@@ -92,6 +108,14 @@ async function setupServer() {
       timestamp: new Date().toISOString()
     });
   });
+
+  // Load debug routes early to ensure they're always available
+  try {
+    app.use('/api/debug', require('./routes/debug'));
+    console.log('Debug routes loaded successfully');
+  } catch (err) {
+    console.error('Error loading debug routes:', err);
+  }
 
   // API básica de verificação de estado (healthcheck)
   app.get('/health', (req, res) => {

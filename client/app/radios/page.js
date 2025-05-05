@@ -21,6 +21,7 @@ export default function RadiosPage() {
   const [radios, setRadios] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [usingMockData, setUsingMockData] = useState(false);
 
   useEffect(() => {
     // Check authentication
@@ -67,17 +68,43 @@ export default function RadiosPage() {
         return;
       }
       
-      const response = await fetch(`${getApiUrl()}/api/radio`, {
+      // First try the real endpoint
+      try {
+        console.log('Fetching radios from real endpoint...');
+        const response = await fetch(`${getApiUrl()}/api/radio`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setRadios(data.radios || []);
+          setUsingMockData(false);
+          return;
+        } else {
+          console.error('Real endpoint failed with status:', response.status);
+          // Continue to fallback
+        }
+      } catch (err) {
+        console.error('Error fetching from real endpoint:', err);
+        // Continue to fallback
+      }
+      
+      // If real endpoint fails, try mock endpoint
+      console.log('Trying fallback mock endpoint...');
+      const mockResponse = await fetch(`${getApiUrl()}/api/debug/mock-radios`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setRadios(data.radios || []);
+      if (mockResponse.ok) {
+        const mockData = await mockResponse.json();
+        setRadios(mockData.radios || []);
+        setUsingMockData(true);
       } else {
-        setError('Failed to load radios. Please try again later.');
+        setError('Failed to load radios. Database connection issue detected.');
       }
     } catch (error) {
       console.error('Error fetching radios:', error);
@@ -106,6 +133,12 @@ export default function RadiosPage() {
           </Link>
         )}
       </div>
+      
+      {usingMockData && (
+        <div className="bg-yellow-100 p-4 rounded-md text-yellow-700 mb-6">
+          <p>⚠️ Using mock data due to database connection issues. Radio creation and management features may be limited.</p>
+        </div>
+      )}
       
       {error && (
         <div className="bg-red-100 p-4 rounded-md text-red-700 mb-6">
