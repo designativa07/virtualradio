@@ -148,4 +148,17 @@ router.get('/me', verifyToken, (req, res) => {
   res.json({ user: req.user });
 });
 
+// Debug route - Add this new route to debug token issues
+router.get('/debug-token', verifyToken, (req, res) => {
+  console.log('Debug token route called');
+  console.log('User from token:', req.user);
+  
+  res.json({ 
+    message: 'Token debug information',
+    user: req.user,
+    tokenWorks: true,
+    timeChecked: new Date().toISOString()
+  });
+});
+
 module.exports = router; 

@@ -17,6 +17,8 @@ export default function CreateRadioPage() {
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
   const [usingMockData, setUsingMockData] = useState(false);
+  const [useTestEndpoint, setUseTestEndpoint] = useState(false);
+  const [useDebugEndpoint, setUseDebugEndpoint] = useState(false);
   
   const { register, handleSubmit, formState: { errors } } = useForm();
   
@@ -67,6 +69,74 @@ export default function CreateRadioPage() {
       
       if (!token) {
         router.push('/login');
+        return;
+      }
+      
+      // Check if we should use test endpoint
+      if (useTestEndpoint) {
+        try {
+          console.log('Creating radio using test endpoint...');
+          const response = await fetch('http://localhost:3030/test-create-radio', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data),
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            console.log('Test endpoint success:', result);
+            setError('Radio created successfully via test endpoint! ID: ' + result.radioId);
+            setTimeout(() => {
+              router.push('/radios');
+            }, 3000);
+            return;
+          } else {
+            console.error('Test endpoint failed:', result);
+            setError('Test endpoint failed: ' + (result.error || 'Unknown error'));
+          }
+        } catch (err) {
+          console.error('Error using test endpoint:', err);
+          setError('Error using test endpoint: ' + err.message);
+        }
+        setIsLoading(false);
+        return;
+      }
+      
+      // Check if we should use debug endpoint
+      if (useDebugEndpoint) {
+        try {
+          console.log('Creating radio using debug endpoint...');
+          const response = await fetch(`${getApiUrl()}/api/radio/debug-create`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data),
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            console.log('Debug endpoint success:', result);
+            setError('Radio created successfully via debug endpoint! ID: ' + result.radioId);
+            setTimeout(() => {
+              router.push('/radios');
+            }, 3000);
+            return;
+          } else {
+            console.error('Debug endpoint failed:', result);
+            setError('Debug endpoint failed: ' + (result.error || 'Unknown error'));
+          }
+        } catch (err) {
+          console.error('Error using debug endpoint:', err);
+          setError('Error using debug endpoint: ' + err.message);
+        }
+        setIsLoading(false);
         return;
       }
       
@@ -154,6 +224,43 @@ export default function CreateRadioPage() {
             {error}
           </div>
         )}
+        
+        {/* Debugging options */}
+        <div className="mb-6 p-4 bg-blue-100 text-blue-700 rounded-md">
+          <h3 className="font-bold mb-2">Debug Options</h3>
+          
+          <div className="flex flex-col space-y-2">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={useTestEndpoint}
+                onChange={(e) => {
+                  setUseTestEndpoint(e.target.checked);
+                  if (e.target.checked) setUseDebugEndpoint(false);
+                }}
+                className="mr-2"
+              />
+              Use test server endpoint (port 3030)
+            </label>
+            
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={useDebugEndpoint}
+                onChange={(e) => {
+                  setUseDebugEndpoint(e.target.checked);
+                  if (e.target.checked) setUseTestEndpoint(false);
+                }}
+                className="mr-2"
+              />
+              Use debug endpoint (fixed admin_id=1)
+            </label>
+          </div>
+          
+          {(useTestEndpoint || useDebugEndpoint) && (
+            <p className="mt-2 text-sm">Debug mode enabled. The radio will be created with special settings for debugging.</p>
+          )}
+        </div>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>

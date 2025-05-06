@@ -20,6 +20,7 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+    console.log('Token verified in radio route:', decoded);
     next();
   } catch (error) {
     console.error('Error verifying token in radio route:', error.message);
@@ -34,7 +35,9 @@ const isAdminOrSystemAdmin = (req, res, next) => {
   // First verify the token
   verifyToken(req, res, () => {
     // Now check the user role from the decoded token
+    console.log('Checking admin role. User:', req.user);
     if (req.user.role !== 'radio_admin' && req.user.role !== 'system_admin' && req.user.role !== 'admin') {
+      console.log('Access denied - Invalid role:', req.user.role);
       return res.status(403).json({ message: 'Access denied' });
     }
     
@@ -86,6 +89,44 @@ router.post('/', isAdminOrSystemAdmin, async (req, res) => {
   const { name, description } = req.body;
   const adminId = req.user.id; // Use JWT user data
   
+  console.log('Creating radio - Request body:', req.body);
+  console.log('Admin ID from token:', adminId);
+  
+  if (!name) {
+    return res.status(400).json({ message: 'Radio name is required' });
+  }
+  
+  try {
+    console.log('Attempting to insert radio with values:', { name, adminId, description: description || '' });
+    const [result] = await db.query(
+      'INSERT INTO radios (name, admin_id, description) VALUES (?, ?, ?)',
+      [name, adminId, description || '']
+    );
+    
+    console.log('Radio created successfully with ID:', result.insertId);
+    
+    res.status(201).json({
+      message: 'Radio created successfully',
+      radioId: result.insertId
+    });
+  } catch (error) {
+    console.error('Error creating radio:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// Debug route to test radio creation with fixed admin ID
+router.post('/debug-create', isAuthenticated, async (req, res) => {
+  const { name, description } = req.body;
+  const adminId = 1; // Fixed admin ID for debugging
+  
+  console.log('Debug creating radio with fixed admin_id=1');
+  console.log('Request body:', req.body);
+  
   if (!name) {
     return res.status(400).json({ message: 'Radio name is required' });
   }
@@ -96,13 +137,23 @@ router.post('/', isAdminOrSystemAdmin, async (req, res) => {
       [name, adminId, description || '']
     );
     
+    console.log('Debug radio created successfully with ID:', result.insertId);
+    
     res.status(201).json({
-      message: 'Radio created successfully',
-      radioId: result.insertId
+      message: 'Radio created successfully using debug endpoint',
+      radioId: result.insertId,
+      debugInfo: {
+        adminId: adminId,
+        originalUser: req.user
+      }
     });
   } catch (error) {
-    console.error('Error creating radio:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error creating debug radio:', error);
+    res.status(500).json({ 
+      message: 'Server error in debug endpoint',
+      error: error.message,
+      stack: error.stack
+    });
   }
 });
 
