@@ -36,23 +36,20 @@ const createFallbackPool = () => {
 
 // Configuração do pool real
 const createRealPool = () => {
-  // Configurações fixas para garantir a conexão
+  // Usar variáveis de ambiente em vez de valores fixos
   const dbConfig = {
-    host: 'localhost',
-    user: 'desig938_myradio',
-    password: 'giNdvTR[l*Tm',
-    database: 'desig938_myradio',
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'desig938_myradio',
+    password: process.env.DB_PASS || 'giNdvTR[l*Tm',
+    database: process.env.DB_NAME || 'desig938_myradio',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 20000, // 20 segundos
-    acquireTimeout: 20000, // 20 segundos
-    timeout: 20000, // 20 segundos
     debug: process.env.NODE_ENV !== 'production',
   };
   
   // Log para debug
-  console.log('Tentando conectar ao banco de dados com configuração fixa:', {
+  console.log('Tentando conectar ao banco de dados com as configurações do ambiente:', {
     host: dbConfig.host,
     user: dbConfig.user,
     database: dbConfig.database,
