@@ -53,7 +53,7 @@ router.use(async (req, res, next) => {
         console.log('Using fallback admin login due to database error');
         
         const user = {
-          id: 0,
+          id: 1,
           username: 'Admin',
           email: 'admin',
           role: 'admin'
@@ -85,7 +85,7 @@ router.post('/login', async (req, res) => {
     // Special handling for admin/admin123 in all environments for testing
     if ((email === 'admin' || email === 'admin@admin.com' || email === 'admin@virtualradio.com') && password === 'admin123') {
       const user = {
-        id: 0,
+        id: 1,
         username: 'Admin',
         email: email,
         role: 'admin'

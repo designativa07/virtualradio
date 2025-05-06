@@ -175,7 +175,7 @@ async function setupServer() {
     // Aceitar tanto 'admin' quanto 'admin@admin.com'
     if ((email === 'admin' || email === 'admin@admin.com' || email === 'admin@virtualradio.com') && password === 'admin123') {
       const user = {
-        id: 0,
+        id: 1,
         username: 'Admin',
         email: email,
         role: 'admin'

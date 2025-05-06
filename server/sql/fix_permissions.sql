@@ -47,10 +47,12 @@ CREATE TABLE IF NOT EXISTS audio_files (
     FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Insere um usuário administrador
-INSERT INTO users (username, email, password, role, created_at) 
-VALUES ('Admin', 'admin@virtualradio.com', SHA2('admin123', 256), 'admin', NOW())
-ON DUPLICATE KEY UPDATE 
-username = 'Admin',
-password = SHA2('admin123', 256),
-role = 'admin';
+-- Limpa dados existentes
+TRUNCATE TABLE audio_files;
+TRUNCATE TABLE radios;
+DELETE FROM users;
+
+-- Insere um usuário administrador com ID fixo
+ALTER TABLE users AUTO_INCREMENT = 1;
+INSERT INTO users (id, username, email, password, role, created_at) 
+VALUES (1, 'Admin', 'admin@virtualradio.com', SHA2('admin123', 256), 'admin', NOW());
