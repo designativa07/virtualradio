@@ -4,16 +4,20 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const db = require('../config/database');
 
-// Chave secreta para JWT
-const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
+// Chave secreta para JWT - garantir que seja consistente
+const JWT_SECRET = process.env.SESSION_SECRET || 'virtualradioappsecretkey';
 
-// Middleware para verificar token JWT
+// Middleware para verificar token JWT com logs detalhados
 const verifyToken = (req, res, next) => {
   // Obter o token do cabeçalho Authorization ou dos cookies
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
   
+  console.log('=== VERIFICAÇÃO DE TOKEN ===');
   console.log('Token recebido:', token ? 'Sim' : 'Não');
+  console.log('Headers de autorização:', req.headers['authorization']);
+  console.log('SESSION_SECRET definido:', process.env.SESSION_SECRET ? 'Sim' : 'Não');
+  console.log('JWT_SECRET usado:', JWT_SECRET);
   
   if (!token) {
     console.log('Nenhum token fornecido');
@@ -27,7 +31,17 @@ const verifyToken = (req, res, next) => {
     next();
   } catch (error) {
     console.error('Erro ao verificar token:', error.message);
-    return res.status(401).json({ message: 'Invalid token' });
+    console.error('Detalhes do erro:', error);
+    
+    // Tentar decodificar sem verificar para debug
+    try {
+      const decodedWithoutVerify = jwt.decode(token);
+      console.log('Token decodificado (sem verificação):', decodedWithoutVerify);
+    } catch (e) {
+      console.error('Erro ao decodificar token:', e.message);
+    }
+    
+    return res.status(401).json({ message: 'Invalid token', error: error.message });
   }
 };
 
@@ -82,6 +96,11 @@ router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   
   try {
+    console.log('=== LOGIN ATTEMPT ===');
+    console.log('Email:', email);
+    console.log('SESSION_SECRET definido:', process.env.SESSION_SECRET ? 'Sim' : 'Não');
+    console.log('JWT_SECRET usado:', JWT_SECRET);
+    
     // Special handling for admin/admin123 in all environments for testing
     if ((email === 'admin' || email === 'admin@admin.com' || email === 'admin@virtualradio.com') && password === 'admin123') {
       const user = {
@@ -93,6 +112,7 @@ router.post('/login', async (req, res) => {
       
       // Gerar token JWT
       const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+      console.log('Token gerado com sucesso para admin');
       
       return res.json({ 
         message: 'Login successful (admin mode)',
@@ -157,7 +177,66 @@ router.get('/debug-token', verifyToken, (req, res) => {
     message: 'Token debug information',
     user: req.user,
     tokenWorks: true,
-    timeChecked: new Date().toISOString()
+    timeChecked: new Date().toISOString(),
+    jwtSecret: JWT_SECRET.substring(0, 3) + '***' // Show just first 3 chars for security
+  });
+});
+
+// Nova rota para verificar token via POST
+router.post('/verify-token', (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({ message: 'Token not provided' });
+  }
+  
+  try {
+    console.log('=== VERIFICAÇÃO MANUAL DE TOKEN ===');
+    console.log('Token fornecido:', token ? 'Sim' : 'Não');
+    console.log('SESSION_SECRET definido:', process.env.SESSION_SECRET ? 'Sim' : 'Não');
+    console.log('JWT_SECRET usado:', JWT_SECRET);
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    return res.json({
+      message: 'Token verified successfully',
+      valid: true,
+      decoded: decoded,
+      jwtSecret: JWT_SECRET.substring(0, 3) + '***'
+    });
+  } catch (error) {
+    console.error('Erro ao verificar token manualmente:', error.message);
+    
+    // Tentar decodificar sem verificar para debug
+    try {
+      const decodedWithoutVerify = jwt.decode(token);
+      console.log('Token decodificado (sem verificação):', decodedWithoutVerify);
+      
+      return res.status(401).json({
+        message: 'Invalid token', 
+        valid: false,
+        decodedPayload: decodedWithoutVerify,
+        error: error.message,
+        jwtSecret: JWT_SECRET.substring(0, 3) + '***'
+      });
+    } catch (e) {
+      return res.status(401).json({
+        message: 'Invalid token format', 
+        valid: false,
+        error: e.message,
+        jwtSecret: JWT_SECRET.substring(0, 3) + '***'
+      });
+    }
+  }
+});
+
+// Rota para verificar configuração do ambiente
+router.get('/config-check', (req, res) => {
+  res.json({
+    sessionSecretDefined: process.env.SESSION_SECRET ? true : false,
+    jwtSecretFirstChars: JWT_SECRET.substring(0, 3) + '***',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
   });
 });
 
