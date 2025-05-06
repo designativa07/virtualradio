@@ -4,12 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
-
-// Função para obter a URL base da API
-const getApiUrl = () => {
-  // Forçar uso do localhost:3000
-  return 'http://localhost:3000';
-};
+import { getApiUrl } from '../utils/api';
 
 export default function Login() {
   const router = useRouter();
