@@ -48,10 +48,6 @@ const spotStorage = multer.diskStorage({
 
 // Filtro para arquivos de áudio
 const audioFilter = (req, file, cb) => {
-  // No modo offline, aceitar qualquer tipo de arquivo
-  cb(null, true);
-  
-  /* Código original comentado
   // Tipos de arquivos de áudio aceitos
   const allowedTypes = [
     'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg',
@@ -63,7 +59,6 @@ const audioFilter = (req, file, cb) => {
   } else {
     cb(new Error('Formato de arquivo não suportado. Somente arquivos de áudio são permitidos.'), false);
   }
-  */
 };
 
 // Inicializar uploads para músicas e spots

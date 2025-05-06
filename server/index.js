@@ -6,6 +6,20 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 
+// Forçar modo online
+process.env.OFFLINE_MODE = 'false';
+if (global.OFFLINE_MODE !== undefined) {
+  global.OFFLINE_MODE = false;
+}
+
+// Configurar variáveis de ambiente padrão se não estiverem definidas
+process.env.DB_HOST = process.env.DB_HOST || '108.167.132.244';
+process.env.DB_PORT = process.env.DB_PORT || '3306';
+process.env.DB_NAME = process.env.DB_NAME || 'desig938_myradio';
+process.env.DB_USER = process.env.DB_USER || 'desig938_myradio';
+process.env.DB_PASS = process.env.DB_PASS || 'f}gjuk$sem6.';
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+
 // Importar modelos e sincronizar com o banco de dados
 const { syncModels } = require('./models');
 
@@ -111,16 +125,25 @@ const PORT = process.env.PORT || 5000;
 // Sincronizar modelos e iniciar servidor
 (async () => {
   try {
+    console.log('Iniciando servidor em modo ONLINE');
+    console.log('Configuração do banco de dados:');
+    console.log(`Host: ${process.env.DB_HOST}`);
+    console.log(`Database: ${process.env.DB_NAME}`);
+    console.log(`User: ${process.env.DB_USER}`);
+    console.log(`Port: ${process.env.DB_PORT}`);
+    
     // Sincronizar modelos com o banco de dados
     await syncModels();
     
     // Iniciar servidor
     app.listen(PORT, () => {
       console.log(`Servidor rodando na porta ${PORT}`);
-      console.log(`Ambiente: ${process.env.NODE_ENV || 'production'}`);
+      console.log(`Ambiente: ${process.env.NODE_ENV}`);
       console.log(`API URL: ${process.env.API_URL || 'https://myradio.h4xd66.easypanel.host/api'}`);
+      console.log('Modo offline: DESATIVADO');
     });
   } catch (error) {
     console.error('Erro ao iniciar servidor:', error);
+    process.exit(1); // Encerrar o processo se houver erro
   }
 })(); 

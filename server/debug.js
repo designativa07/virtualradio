@@ -42,10 +42,11 @@ try {
   
   // Análise do código fonte
   const fs = require('fs');
+  const path = require('path');
   const controllerFiles = [
-    './controllers/radioController.js',
-    './controllers/musicController.js',
-    './controllers/spotController.js'
+    path.join(__dirname, 'controllers/radioController.js'),
+    path.join(__dirname, 'controllers/musicController.js'),
+    path.join(__dirname, 'controllers/spotController.js')
   ];
 
   controllerFiles.forEach(file => {
@@ -56,12 +57,27 @@ try {
         content.includes('global.offlineRadios') ||
         content.includes('exampleRadio') ||
         content.includes('exampleMusic') ||
-        content.includes('exampleSpot');
+        content.includes('exampleSpot') ||
+        content.includes('mock') ||
+        content.includes('OFFLINE_MODE');
       
       if (hasOfflineCode) {
-        console.log(`❌ ${file} ainda contém código de modo offline!`);
+        console.log(`❌ ${path.basename(file)} ainda contém código de modo offline!`);
+        // Mostrar as linhas problemáticas
+        const lines = content.split('\n');
+        lines.forEach((line, index) => {
+          if (line.includes('Modo offline') || 
+              line.includes('global.offlineRadios') ||
+              line.includes('exampleRadio') ||
+              line.includes('exampleMusic') ||
+              line.includes('exampleSpot') ||
+              line.includes('mock') ||
+              line.includes('OFFLINE_MODE')) {
+            console.log(`   Linha ${index + 1}: ${line.trim()}`);
+          }
+        });
       } else {
-        console.log(`✅ ${file} não contém código de modo offline.`);
+        console.log(`✅ ${path.basename(file)} não contém código de modo offline.`);
       }
     } catch (err) {
       console.log(`❌ Erro ao analisar ${file}:`, err.message);
