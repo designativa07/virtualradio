@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualRadio</title>
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Script de configuração da API -->
+  <script src="api-config.js"></script>
+</head>
+<body>
+  <div id="app">
+    <h1>VirtualRadio</h1>
+    <p>Carregando aplicação...</p>
+  </div>
+  
+  <script>
+    // Script para testar a conexão com a API
+    async function testApiConnection() {
+      try {
+        console.log('Testando conexão com a API...');
+        
+        // Tentar login de teste
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'admin@virtualradio.com', password: 'teste123' })
+        });
+        
+        const loginData = await loginResponse.json();
+        console.log('Resposta de login:', loginData);
+        
+        if (loginData.token) {
+          console.log('Token recebido, testando verificação de autenticação...');
+          
+          // Testar verificação de autenticação
+          const authResponse = await fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${loginData.token}`
+            }
+          });
+          
+          const authData = await authResponse.json();
+          console.log('Resposta de autenticação:', authData);
+          
+          // Atualizar a interface
+          document.getElementById('app').innerHTML = `
+            <h1>VirtualRadio</h1>
+            <div class="success">
+              <h2>Conexão estabelecida!</h2>
+              <p>Usuário: ${authData.user ? authData.user.name : 'Desconhecido'}</p>
+              <p>Papel: ${authData.user ? authData.user.role : 'N/A'}</p>
+              <p>Modo: ${authData.mode || (authData.isTest ? 'Teste' : 'Produção')}</p>
+            </div>
+          `;
+        } else {
+          throw new Error('Falha no login');
+        }
+      } catch (error) {
+        console.error('Erro ao testar conexão:', error);
+        
+        document.getElementById('app').innerHTML = `
+          <h1>VirtualRadio</h1>
+          <div class="error">
+            <h2>Erro de conexão</h2>
+            <p>${error.message}</p>
+            <p>Verifique o console para mais detalhes.</p>
+          </div>
+        `;
+      }
+    }
+    
+    // Executar o teste quando a página carregar
+    window.addEventListener('DOMContentLoaded', testApiConnection);
+  </script>
+</body>
+</html> 
