@@ -211,7 +211,7 @@ async function setupServer() {
   });
 
   // Rota raiz com status do aplicativo e do banco de dados
-  app.get('/', async (req, res) => {
+  app.get('/status', async (req, res) => {
     let dbStatus = 'Desconhecido';
     let dbError = '';
     
