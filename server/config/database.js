@@ -5,7 +5,7 @@ dotenv.config();
 
 // Log da configuração do banco de dados (excluindo senha)
 console.log('Configuração do banco de dados:', {
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST || 'site-designativa_myradio-sql',
   user: process.env.DB_USER || 'desig938_myradio',
   database: process.env.DB_NAME || 'desig938_myradio',
   connectionLimit: 10,
@@ -38,7 +38,7 @@ const createFallbackPool = () => {
 const createRealPool = () => {
   // Usar variáveis de ambiente em vez de valores fixos
   const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
+    host: process.env.DB_HOST || 'site-designativa_myradio-sql',
     user: process.env.DB_USER || 'desig938_myradio',
     password: process.env.DB_PASS || 'giNdvTR[l*Tm',
     database: process.env.DB_NAME || 'desig938_myradio',
