@@ -4,7 +4,7 @@ const db = require('../config/database');
 const jwt = require('jsonwebtoken');
 
 // JWT Secret
-const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
+const JWT_SECRET = process.env.SESSION_SECRET || 'virtualradioappsecretkey';
 
 // Middleware for JWT verification
 const verifyToken = (req, res, next) => {

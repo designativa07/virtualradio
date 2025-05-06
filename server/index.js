@@ -7,8 +7,32 @@ const session = require('express-session');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
-// Load environment variables
-dotenv.config();
+// Tentar carregar variáveis de ambiente de múltiplos lugares
+const envFiles = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../.env.local')
+];
+
+// Tentar carregar cada arquivo
+for (const envFile of envFiles) {
+  if (fs.existsSync(envFile)) {
+    console.log(`Carregando variáveis de ambiente de: ${envFile}`);
+    dotenv.config({ path: envFile });
+  }
+}
+
+// Definir manualmente as variáveis de ambiente para desenvolvimento local se não foram carregadas
+if (!process.env.DB_HOST) {
+  console.log('Variáveis de ambiente não carregadas adequadamente. Usando valores padrão para desenvolvimento local.');
+  process.env.DB_HOST = 'localhost';
+  process.env.DB_USER = 'desig938_myradio';
+  process.env.DB_PASS = 'VirtualRadio123';
+  process.env.DB_NAME = 'desig938_myradio';
+  process.env.PORT = '3000';
+  process.env.NODE_ENV = 'development';
+  process.env.SESSION_SECRET = 'virtualradioappsecretkey';
+  process.env.CLIENT_URL = 'http://localhost:3001';
+}
 
 // Print environment variables (excluding sensitive data)
 console.log('Environment variables loaded:', {
@@ -168,7 +192,7 @@ async function setupServer() {
   app.post('/api/auth/login-fallback', (req, res) => {
     const { email, password } = req.body;
     
-    const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
+    const JWT_SECRET = process.env.SESSION_SECRET || 'virtualradioappsecretkey';
     
     console.log('Login fallback tentado com:', { email });
     

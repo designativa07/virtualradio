@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // JWT Secret
-const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
+const JWT_SECRET = process.env.SESSION_SECRET || 'virtualradioappsecretkey';
 
 // Create a test token with admin credentials
 const createTestToken = () => {

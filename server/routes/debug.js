@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 
 // JWT Secret
-const JWT_SECRET = process.env.SESSION_SECRET || 'jwt_secret_key';
+const JWT_SECRET = process.env.SESSION_SECRET || 'virtualradioappsecretkey';
 
 // Middleware for JWT verification - with detailed logging
 const verifyToken = (req, res, next) => {
