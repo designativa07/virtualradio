@@ -210,127 +210,179 @@ async function setupServer() {
     });
   });
 
-  try {
-    // Try to load API routes
-    // Wrap in try/catch to prevent crashing if database connection fails
+  // Rota raiz com status do aplicativo e do banco de dados
+  app.get('/', async (req, res) => {
+    let dbStatus = 'Desconhecido';
+    let dbError = '';
+    
     try {
-      app.use('/api/auth', require('./routes/auth'));
-      app.use('/api/admin', require('./routes/admin'));
-      app.use('/api/radio', require('./routes/radio'));
-      app.use('/api/audio', require('./routes/audio'));
-      console.log('API routes loaded successfully');
-    } catch (err) {
-      console.error('Error loading API routes:', err);
-      app.use('/api/auth', (req, res, next) => {
-        if (req.path === '/login' && req.method === 'POST') {
-          const { email, password } = req.body;
-          
-          // Aceitar tanto 'admin' quanto 'admin@admin.com'
-          if ((email === 'admin' || email === 'admin@admin.com') && password === 'admin123') {
-            req.session.user = {
-              id: 0,
-              username: 'Admin',
-              email: email,
-              role: 'admin'
-            };
-            return res.json({ 
-              message: 'Login bem-sucedido (modo admin)',
-              user: req.session.user
-            });
-          }
-          return res.status(401).json({ message: 'Credenciais inválidas' });
-        }
-        res.status(503).json({ error: 'Serviço de autenticação indisponível' });
-      });
-      app.use('/api/admin', (req, res) => res.status(503).json({ error: 'Serviço de administração indisponível' }));
-      app.use('/api/radio', (req, res) => res.status(503).json({ error: 'Serviço de rádio indisponível' }));
-      app.use('/api/audio', (req, res) => res.status(503).json({ error: 'Serviço de áudio indisponível' }));
-    }
-
-    // Servir o Next.js em modo SSR em produção
-    if (process.env.NODE_ENV === 'production') {
+      const db = require('./config/database');
+      
       try {
-        const next = require('next');
-        const dev = false;
-        const clientDir = path.join(__dirname, '../client');
-        
-        // Verificar se o diretório .next/server existe e criá-lo caso não exista
-        const serverDir = path.join(clientDir, '.next/server');
-        if (!fs.existsSync(serverDir)) {
-          fs.mkdirSync(serverDir, { recursive: true });
-          console.log('Created .next/server directory');
-        }
-        
-        // Verificar se o arquivo font-manifest.json existe e criá-lo caso não exista
-        const fontManifestPath = path.join(serverDir, 'font-manifest.json');
-        if (!fs.existsSync(fontManifestPath)) {
-          fs.writeFileSync(fontManifestPath, '[]', 'utf8');
-          console.log('Created empty font-manifest.json file');
-        }
-        
-        const nextApp = next({ dev, dir: clientDir });
-        const handle = nextApp.getRequestHandler();
-        console.log('Inicializando Next.js para SSR...');
-        await nextApp.prepare();
-        app.all('*', (req, res) => {
-          return handle(req, res);
-        });
-        console.log('Next.js integrado com sucesso (SSR)');
-      } catch (err) {
-        console.error('Erro ao inicializar Next.js:', err);
-        // Disponibilizar uma página simples para não quebrar totalmente o aplicativo
-        app.get('*', (req, res, next) => {
-          if (req.path.startsWith('/api/')) {
-            return next();
-          }
-          res.send(`
-            <html>
-              <head><title>VirtualRadio - Modo de contingência</title></head>
-              <body>
-                <h1>VirtualRadio - Modo de contingência</h1>
-                <p>O frontend está temporariamente indisponível. Por favor, tente novamente mais tarde.</p>
-                <p>API endpoints continuam disponíveis em /api/*</p>
-              </body>
-            </html>
-          `);
-        });
+        // Tentar obter uma conexão
+        const connection = await db.getConnection();
+        connection.release();
+        dbStatus = 'Conectado';
+      } catch (dbError) {
+        dbStatus = 'Falha na conexão';
+        dbError = dbError.message;
       }
-    } else {
-      // Em desenvolvimento, apenas redirecionar para a API (o frontend será executado separadamente)
+    } catch (err) {
+      dbStatus = 'Erro ao carregar módulo de banco de dados';
+      dbError = err.message;
+    }
+    
+    // Enviar HTML simples com as informações
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>VirtualRadio - Status do Servidor</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+          h1 { color: #333; }
+          .status { margin: 20px 0; padding: 15px; border-radius: 5px; }
+          .success { background-color: #d4edda; color: #155724; }
+          .warning { background-color: #fff3cd; color: #856404; }
+          .error { background-color: #f8d7da; color: #721c24; }
+          .box { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+          pre { background: #f8f9fa; padding: 10px; overflow: auto; }
+          a { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+          a:hover { background: #0056b3; }
+        </style>
+      </head>
+      <body>
+        <h1>VirtualRadio - Status do Servidor</h1>
+        
+        <div class="box">
+          <h2>Informações do Servidor</h2>
+          <p><strong>Ambiente:</strong> ${process.env.NODE_ENV || 'development'}</p>
+          <p><strong>Tempo de atividade:</strong> ${Math.floor(process.uptime())} segundos</p>
+          <p><strong>Porta:</strong> ${process.env.PORT || 3000}</p>
+        </div>
+        
+        <div class="box">
+          <h2>Status do Banco de Dados</h2>
+          <div class="status ${dbStatus === 'Conectado' ? 'success' : 'error'}">
+            <p><strong>Status:</strong> ${dbStatus}</p>
+            ${dbError ? `<p><strong>Erro:</strong> ${dbError}</p>` : ''}
+          </div>
+          
+          <h3>Configuração do Banco de Dados</h3>
+          <pre>
+HOST: ${process.env.DB_HOST || 'não definido'}
+USER: ${process.env.DB_USER || 'não definido'}
+DATABASE: ${process.env.DB_NAME || 'não definido'}
+          </pre>
+        </div>
+        
+        <div class="box">
+          <h2>Links Úteis</h2>
+          <ul>
+            <li><a href="/db-status">Verificar Status do BD (JSON)</a></li>
+            <li><a href="/api/debug/mock-radios">Listar Rádios (Mock)</a></li>
+            <li><a href="/api/test">Testar API</a></li>
+            <li><a href="/health">Verificar Saúde do Servidor</a></li>
+          </ul>
+        </div>
+        
+        <a href="${process.env.CLIENT_URL || 'http://localhost:3001'}" target="_blank">Abrir Aplicação Cliente</a>
+      </body>
+      </html>
+    `);
+  });
+
+  // API routes
+  try {
+    app.use('/api/auth', require('./routes/auth'));
+    app.use('/api/radio', require('./routes/radio'));
+    app.use('/api/audio', require('./routes/audio'));
+    app.use('/api/admin', require('./routes/admin'));
+    console.log('API routes loaded successfully');
+  } catch (err) {
+    console.error('Error loading API routes:', err);
+  }
+
+  // Servir o Next.js em modo SSR em produção
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      const next = require('next');
+      const dev = false;
+      const clientDir = path.join(__dirname, '../client');
+      
+      // Verificar se o diretório .next/server existe e criá-lo caso não exista
+      const serverDir = path.join(clientDir, '.next/server');
+      if (!fs.existsSync(serverDir)) {
+        fs.mkdirSync(serverDir, { recursive: true });
+        console.log('Created .next/server directory');
+      }
+      
+      // Verificar se o arquivo font-manifest.json existe e criá-lo caso não exista
+      const fontManifestPath = path.join(serverDir, 'font-manifest.json');
+      if (!fs.existsSync(fontManifestPath)) {
+        fs.writeFileSync(fontManifestPath, '[]', 'utf8');
+        console.log('Created empty font-manifest.json file');
+      }
+      
+      const nextApp = next({ dev, dir: clientDir });
+      const handle = nextApp.getRequestHandler();
+      console.log('Inicializando Next.js para SSR...');
+      await nextApp.prepare();
+      app.all('*', (req, res) => {
+        return handle(req, res);
+      });
+      console.log('Next.js integrado com sucesso (SSR)');
+    } catch (err) {
+      console.error('Erro ao inicializar Next.js:', err);
+      // Disponibilizar uma página simples para não quebrar totalmente o aplicativo
       app.get('*', (req, res, next) => {
         if (req.path.startsWith('/api/')) {
           return next();
         }
-        res.status(404).send('Aplicação frontend não disponível em modo de desenvolvimento. Use npm run dev:client para iniciar o frontend.');
+        res.send(`
+          <html>
+            <head><title>VirtualRadio - Modo de contingência</title></head>
+            <body>
+              <h1>VirtualRadio - Modo de contingência</h1>
+              <p>O frontend está temporariamente indisponível. Por favor, tente novamente mais tarde.</p>
+              <p>API endpoints continuam disponíveis em /api/*</p>
+            </body>
+          </html>
+        `);
       });
     }
-
-    // Start server
-    const PORT = process.env.PORT || 3000;
-    const server = app.listen(PORT, () => {
-      console.log(`VirtualRadio server running on port ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-
-    // Handle server errors
-    server.on('error', (error) => {
-      console.error('Server error:', error);
-      if (error.code === 'EACCES') {
-        console.error(`Port ${PORT} requires elevated privileges`);
-      } else if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use`);
+  } else {
+    // Em desenvolvimento, apenas redirecionar para a API (o frontend será executado separadamente)
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) {
+        return next();
       }
+      res.status(404).send('Aplicação frontend não disponível em modo de desenvolvimento. Use npm run dev:client para iniciar o frontend.');
     });
-
-    // Configurar keepalive para evitar problemas de conexão pendente
-    server.keepAliveTimeout = 65000; // 65 segundos
-    server.headersTimeout = 66000; // 66 segundos (deve ser maior que keepAliveTimeout)
-
-    return server;
-  } catch (err) {
-    console.error('Critical error during server setup:', err);
-    throw err;
   }
+
+  // Start server
+  const PORT = process.env.PORT || 3000;
+  const server = app.listen(PORT, () => {
+    console.log(`VirtualRadio server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+
+  // Handle server errors
+  server.on('error', (error) => {
+    console.error('Server error:', error);
+    if (error.code === 'EACCES') {
+      console.error(`Port ${PORT} requires elevated privileges`);
+    } else if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use`);
+    }
+  });
+
+  // Configurar keepalive para evitar problemas de conexão pendente
+  server.keepAliveTimeout = 65000; // 65 segundos
+  server.headersTimeout = 66000; // 66 segundos (deve ser maior que keepAliveTimeout)
+
+  return server;
 }
 
 // Iniciar o servidor

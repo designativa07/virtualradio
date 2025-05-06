@@ -6,14 +6,19 @@ dotenv.config();
 // Log da configuração do banco de dados (excluindo senha)
 console.log('Configuração do banco de dados:', {
   host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  database: process.env.DB_NAME || 'virtualradio',
+  user: process.env.DB_USER || 'desig938_myradio',
+  database: process.env.DB_NAME || 'desig938_myradio',
   connectionLimit: 10,
 });
 
 // Criar uma versão do pool que falha graciosamente
 const createFallbackPool = () => {
-  console.warn('Usando pool de banco de dados fallback - funcionalidade limitada');
+  console.warn('\n=============================================================');
+  console.warn('ATENÇÃO: Usando pool de banco de dados fallback!');
+  console.warn('O aplicativo está operando em modo de mock (dados simulados).');
+  console.warn('Verifique se o servidor MySQL está ativo e as credenciais estão corretas.');
+  console.warn('=============================================================\n');
+  
   return {
     execute: async (...args) => {
       console.error('Tentativa de executar query com banco de dados indisponível:', args[0]);
@@ -31,11 +36,12 @@ const createFallbackPool = () => {
 
 // Configuração do pool real
 const createRealPool = () => {
-  return mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'virtualradio',
+  // Configurações fixas para garantir a conexão
+  const dbConfig = {
+    host: 'localhost',
+    user: 'desig938_myradio',
+    password: 'giNdvTR[l*Tm',
+    database: 'desig938_myradio',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
@@ -43,7 +49,17 @@ const createRealPool = () => {
     acquireTimeout: 20000, // 20 segundos
     timeout: 20000, // 20 segundos
     debug: process.env.NODE_ENV !== 'production',
+  };
+  
+  // Log para debug
+  console.log('Tentando conectar ao banco de dados com configuração fixa:', {
+    host: dbConfig.host,
+    user: dbConfig.user,
+    database: dbConfig.database,
+    connectionLimit: dbConfig.connectionLimit
   });
+  
+  return mysql.createPool(dbConfig);
 };
 
 // Sistema de fallback com retry
@@ -64,7 +80,14 @@ try {
 // Função para verificar a conexão
 const checkConnection = async () => {
   if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
-    console.error(`Máximo de ${MAX_CONNECTION_ATTEMPTS} tentativas de conexão atingido. Usando modo fallback.`);
+    console.error(`\n===================================================`);
+    console.error(`Máximo de ${MAX_CONNECTION_ATTEMPTS} tentativas de conexão atingido.`);
+    console.error(`Usando modo fallback - DADOS SIMULADOS ATIVOS.`);
+    console.error(`Verifique as credenciais do banco de dados em seu arquivo .env:`);
+    console.error(`HOST: ${process.env.DB_HOST || 'não definido'}`);
+    console.error(`USER: ${process.env.DB_USER || 'não definido'}`);
+    console.error(`DB: ${process.env.DB_NAME || 'não definido'}`);
+    console.error(`===================================================\n`);
     return;
   }
 
@@ -75,10 +98,13 @@ const checkConnection = async () => {
     // Tentar obter uma conexão
     const connection = await pool.getConnection();
     connection.release();
+    console.log('\n===================================================');
     console.log('Conexão com banco de dados estabelecida com sucesso!');
+    console.log('===================================================\n');
     isConnected = true;
   } catch (err) {
     console.error(`Falha na tentativa ${connectionAttempts}: ${err.message}`);
+    console.error('Código de erro:', err.code || 'DESCONHECIDO');
     
     // Se ainda estiver usando o pool real mas falhou, tentar reconectar depois
     if (!(pool.query === createFallbackPool().query)) {
