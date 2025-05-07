@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
-import { getApiUrl } from '../../utils/api';
+import { getApiUrl, fetchApi } from '../../utils/api';
 
 export default function CreateRadioPage() {
   const router = useRouter();
@@ -20,25 +20,9 @@ export default function CreateRadioPage() {
     // Check authentication
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('authToken');
+        // Use fetchApi instead of direct fetch to handle authentication errors and fallbacks
+        const data = await fetchApi('/api/auth/me');
         
-        if (!token) {
-          router.push('/login');
-          return;
-        }
-        
-        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          router.push('/login');
-          return;
-        }
-        
-        const data = await response.json();
         setUser(data.user);
         
         // Check if user has permission to create radios
@@ -59,105 +43,63 @@ export default function CreateRadioPage() {
     setError('');
     
     try {
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-      
       // Check if we should use debug endpoint
       if (useDebugEndpoint) {
         try {
           console.log('Creating radio using debug endpoint...');
-          const response = await fetch(`${getApiUrl()}/api/radio/debug-create`, {
+          const result = await fetchApi('/api/radio/debug-create', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify(data),
           });
           
-          const result = await response.json();
-          
-          if (response.ok) {
-            console.log('Debug endpoint success:', result);
-            setError('Radio created successfully via debug endpoint! ID: ' + result.radioId);
-            setTimeout(() => {
-              router.push('/radios');
-            }, 3000);
-            return;
-          } else {
-            console.error('Debug endpoint failed:', result);
-            setError('Debug endpoint failed: ' + (result.error || 'Unknown error'));
-          }
+          console.log('Debug endpoint success:', result);
+          setError('Radio created successfully via debug endpoint! ID: ' + result.radioId);
+          setTimeout(() => {
+            router.push('/radios');
+          }, 3000);
+          return;
         } catch (err) {
           console.error('Error using debug endpoint:', err);
           setError('Error using debug endpoint: ' + err.message);
+          setIsLoading(false);
+          return;
         }
-        setIsLoading(false);
-        return;
       }
       
-      // First try the real endpoint
+      // Try the real endpoint using our enhanced fetchApi function that handles errors and 401 responses
       try {
         console.log('Creating radio using real endpoint...');
-        const response = await fetch(`${getApiUrl()}/api/radio`, {
+        const result = await fetchApi('/api/radio', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
           body: JSON.stringify(data),
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          // Redirect to the new radio page
-          if (result.radioId) {
-            router.push(`/radios/${result.radioId}`);
-          } else {
+        // If we get here, it worked (or returned a mock response)
+        if (result.isMock) {
+          setUsingMockData(true);
+          setError('Radio created in mock mode due to server unavailability. The data will not be permanently saved.');
+          
+          // After 3 seconds, redirect to radios list
+          setTimeout(() => {
             router.push('/radios');
-          }
+          }, 3000);
           return;
-        } else {
-          console.error('Real endpoint failed with status:', response.status);
-          // Continue to fallback
         }
+        
+        // Real success - redirect to the new radio page
+        if (result.radioId) {
+          router.push(`/radios/${result.radioId}`);
+        } else {
+          router.push('/radios');
+        }
+        return;
       } catch (err) {
         console.error('Error using real endpoint:', err);
-        // Continue to fallback
-      }
-      
-      // If real endpoint failed, try mock endpoint
-      console.log('Trying fallback mock endpoint for radio creation...');
-      const mockResponse = await fetch(`${getApiUrl()}/api/debug/mock-radio`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (mockResponse.ok) {
-        const mockResult = await mockResponse.json();
-        setUsingMockData(true);
-        
-        // Show mock data warning and redirect after delay
-        setError('Radio created in mock mode due to database issues. The data will not be permanently saved.');
-        
-        // After 3 seconds, redirect to radios list
-        setTimeout(() => {
-          router.push('/radios');
-        }, 3000);
-      } else {
-        setError('Failed to create radio. Both normal and fallback endpoints failed.');
+        setError(`Radio creation failed: ${err.message}. Try using the debug endpoint.`);
       }
     } catch (error) {
       console.error('Error creating radio:', error);
-      setError('An error occurred. Please try again.');
+      setError('An error occurred. Please try again or use the debug option.');
     } finally {
       setIsLoading(false);
     }

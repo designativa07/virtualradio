@@ -5,16 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AudioPlayer from '../../../components/AudioPlayer';
 import AudioUploadForm from '../../../components/AudioUploadForm';
-
-// Função para obter a URL base da API
-const getApiUrl = () => {
-  // Forçar uso do localhost:3000
-  return 'http://localhost:3000';
-};
+import RadioPlayer from '../../../components/RadioPlayer';
+import { fetchApi } from '../../utils/api';
 
 export default function RadioDetail({ params }) {
   const router = useRouter();
-  const radioId = params.id;
+  const [radioId, setRadioId] = useState(null);
   
   const [radio, setRadio] = useState(null);
   const [audioFiles, setAudioFiles] = useState([]);
@@ -23,151 +19,102 @@ export default function RadioDetail({ params }) {
   const [user, setUser] = useState(null);
   const [selectedAudio, setSelectedAudio] = useState(null);
   const [usingMockData, setUsingMockData] = useState(false);
+  const [showRadioPlayer, setShowRadioPlayer] = useState(false);
 
   useEffect(() => {
-    // Check authentication
-    const checkAuth = async () => {
+    // Set the radioId from params safely
+    const initParams = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        
-        if (!token) {
-          router.push('/login');
-          return;
+        // Safely handle params which may be a promise in Next.js
+        const id = typeof params === 'object' ? params.id : (await params).id;
+        if (!id) {
+          throw new Error('Missing radio ID parameter');
         }
-        
-        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          router.push('/login');
-          return;
-        }
-        
-        const data = await response.json();
-        setUser(data.user);
-        
-        // Fetch radio details and audio files
-        fetchRadio();
-        fetchAudioFiles();
+        setRadioId(id);
       } catch (error) {
-        console.error('Error checking authentication:', error);
-        router.push('/login');
+        console.error('Error getting params:', error);
+        setError('Failed to get radio ID from URL');
       }
     };
     
-    checkAuth();
+    initParams();
+  }, [params]);
+
+  useEffect(() => {
+    // Skip if radioId is not yet set
+    if (!radioId) return;
+    
+    // Check authentication and load data
+    const loadData = async () => {
+      try {
+        // Check authentication with our enhanced fetchApi
+        const authData = await fetchApi('/api/auth/me');
+        setUser(authData.user);
+        
+        // Fetch radio details and audio files
+        await Promise.all([fetchRadio(), fetchAudioFiles()]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setError('Failed to load radio data: ' + error.message);
+        if (error.message.includes('Authentication required')) {
+          router.push('/login');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, [radioId, router]);
   
   const fetchRadio = async () => {
+    if (!radioId) return;
+    
     try {
-      const token = localStorage.getItem('authToken');
+      // Use enhanced fetchApi for better error handling and offline support
+      console.log('Fetching radio details...');
+      const data = await fetchApi(`/api/radio/${radioId}`);
       
-      if (!token) {
-        router.push('/login');
-        return;
-      }
+      setRadio(data.radio);
       
-      // First try the real endpoint
-      try {
-        console.log('Fetching radio from real endpoint...');
-        const response = await fetch(`${getApiUrl()}/api/radio/${radioId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setRadio(data.radio);
-          setUsingMockData(false);
-          return;
-        } else {
-          console.error('Real endpoint failed with status:', response.status);
-          // Continue to fallback
-        }
-      } catch (err) {
-        console.error('Error fetching from real endpoint:', err);
-        // Continue to fallback
-      }
-      
-      // If real endpoint fails, try mock endpoint
-      console.log('Trying fallback mock endpoint for radio details...');
-      const mockResponse = await fetch(`${getApiUrl()}/api/debug/mock-radio/${radioId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (mockResponse.ok) {
-        const mockData = await mockResponse.json();
-        setRadio(mockData.radio);
+      // Check if the response is from a mock handler
+      if (data.isMock) {
         setUsingMockData(true);
+        console.log('Using mock radio data');
       } else {
-        setError('Failed to load radio. Database connection issue detected.');
+        setUsingMockData(false);
       }
     } catch (error) {
       console.error('Error fetching radio:', error);
-      setError('Failed to load radio information');
-    } finally {
-      setIsLoading(false);
+      setError('Failed to load radio information: ' + error.message);
+      throw error; // Re-throw to be caught by the parent
     }
   };
   
   const fetchAudioFiles = async () => {
+    if (!radioId) return;
+    
     try {
-      const token = localStorage.getItem('authToken');
+      // Use enhanced fetchApi for better error handling and offline support
+      console.log('Fetching audio files...');
+      const data = await fetchApi(`/api/audio/radio/${radioId}`);
       
-      if (!token) {
-        return;
-      }
+      setAudioFiles(data.audioFiles || data.files || []);
       
-      // First try the real endpoint
-      try {
-        console.log('Fetching audio files from real endpoint...');
-        const response = await fetch(`${getApiUrl()}/api/audio/radio/${radioId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setAudioFiles(data.files || []);
-          return;
-        } else {
-          console.error('Real audio endpoint failed with status:', response.status);
-          // Continue to fallback
-        }
-      } catch (err) {
-        console.error('Error fetching audio from real endpoint:', err);
-        // Continue to fallback
-      }
-      
-      // If real endpoint fails, try mock endpoint
-      console.log('Trying fallback mock endpoint for audio files...');
-      const mockResponse = await fetch(`${getApiUrl()}/api/debug/mock-audio/radio/${radioId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (mockResponse.ok) {
-        const mockData = await mockResponse.json();
-        setAudioFiles(mockData.files || []);
+      // Check if the response is from a mock handler
+      if (data.isMock) {
         setUsingMockData(true);
-      } else {
-        console.error('Mock audio endpoint also failed');
+        console.log('Using mock audio data');
       }
     } catch (error) {
       console.error('Error fetching audio files:', error);
+      // Don't throw here, just log it - we can still show the radio without audio files
     }
   };
   
   const handleAudioSelect = (audio) => {
     setSelectedAudio(audio);
+    setShowRadioPlayer(false); // Hide radio player when selecting individual audio
   };
   
   const handleAudioDelete = async (audioId) => {
@@ -189,33 +136,28 @@ export default function RadioDetail({ params }) {
     }
     
     try {
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        return;
-      }
-      
-      const response = await fetch(`${getApiUrl()}/api/audio/${audioId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      // Use enhanced fetchApi
+      await fetchApi(`/api/audio/${audioId}`, {
+        method: 'DELETE'
       });
       
-      if (response.ok) {
-        // Remove file from list
-        setAudioFiles(audioFiles.filter(file => file.id !== audioId));
-        
-        // Clear selected audio if it was deleted
-        if (selectedAudio && selectedAudio.id === audioId) {
-          setSelectedAudio(null);
-        }
-      } else {
-        alert('Failed to delete audio file');
+      // Remove file from list
+      setAudioFiles(audioFiles.filter(file => file.id !== audioId));
+      
+      // Clear selected audio if it was deleted
+      if (selectedAudio && selectedAudio.id === audioId) {
+        setSelectedAudio(null);
       }
     } catch (error) {
       console.error('Error deleting audio:', error);
-      alert('An error occurred while deleting the audio file');
+      alert('An error occurred while deleting the audio file: ' + error.message);
+    }
+  };
+  
+  const toggleRadioPlayer = () => {
+    setShowRadioPlayer(!showRadioPlayer);
+    if (!showRadioPlayer) {
+      setSelectedAudio(null); // Clear selected audio when showing radio player
     }
   };
   
@@ -251,12 +193,31 @@ export default function RadioDetail({ params }) {
         </div>
       )}
       
-      <div className="flex items-center mb-8">
-        <Link href="/radios" className="text-primary hover:underline mr-4">
-          ← Back to Radios
-        </Link>
-        <h1 className="text-3xl font-bold">{radio.name}</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center">
+          <Link href="/radios" className="text-primary hover:underline mr-4">
+            ← Back to Radios
+          </Link>
+          <h1 className="text-3xl font-bold">{radio.name}</h1>
+        </div>
+        
+        <button
+          onClick={toggleRadioPlayer}
+          className={`px-4 py-2 rounded-md ${showRadioPlayer ? 'bg-gray-200 text-gray-800' : 'bg-primary text-white'}`}
+        >
+          {showRadioPlayer ? 'Hide Radio Player' : 'Start Radio Station'}
+        </button>
       </div>
+      
+      {showRadioPlayer && audioFiles.length > 0 && (
+        <div className="mb-8">
+          <RadioPlayer 
+            stationName={radio.name}
+            audioFiles={audioFiles}
+            autoplay={true}
+          />
+        </div>
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
@@ -280,10 +241,10 @@ export default function RadioDetail({ params }) {
             </div>
           </div>
           
-          {selectedAudio && (
+          {selectedAudio && !showRadioPlayer && (
             <div className="mb-8">
               <AudioPlayer 
-                audioSrc={`/${selectedAudio.file_path}`} 
+                audioSrc={selectedAudio.file_path ? `/${selectedAudio.file_path}` : `/api/audio/stream/${selectedAudio.id}`}
                 title={selectedAudio.title}
               />
             </div>

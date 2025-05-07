@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { fetchApi } from '../utils/api';
 
 // Function to get the API base URL
 const getApiUrl = () => {
@@ -22,25 +23,8 @@ export default function RadiosPage() {
     // Check authentication
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        
-        if (!token) {
-          router.push('/login');
-          return;
-        }
-        
-        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          router.push('/login');
-          return;
-        }
-        
-        const data = await response.json();
+        // Use enhanced fetchApi for better error handling
+        const data = await fetchApi('/api/auth/me');
         setUser(data.user);
         
         // Fetch radios
@@ -57,53 +41,23 @@ export default function RadiosPage() {
   
   const fetchRadios = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      // Use enhanced fetchApi that handles authentication and fallbacks
+      console.log('Fetching radios...');
+      const data = await fetchApi('/api/radio');
       
-      if (!token) {
-        return;
-      }
-      
-      // First try the real endpoint
-      try {
-        console.log('Fetching radios from real endpoint...');
-        const response = await fetch(`${getApiUrl()}/api/radio`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setRadios(data.radios || []);
-          setUsingMockData(false);
-          return;
-        } else {
-          console.error('Real endpoint failed with status:', response.status);
-          // Continue to fallback
-        }
-      } catch (err) {
-        console.error('Error fetching from real endpoint:', err);
-        // Continue to fallback
-      }
-      
-      // If real endpoint fails, try mock endpoint
-      console.log('Trying fallback mock endpoint...');
-      const mockResponse = await fetch(`${getApiUrl()}/api/debug/mock-radios`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (mockResponse.ok) {
-        const mockData = await mockResponse.json();
-        setRadios(mockData.radios || []);
+      // Check if the response is from a mock handler
+      if (data.isMock) {
         setUsingMockData(true);
+        console.log('Using mock radio data');
       } else {
-        setError('Failed to load radios. Database connection issue detected.');
+        setUsingMockData(false);
+        console.log('Using real radio data');
       }
+      
+      setRadios(data.radios || []);
     } catch (error) {
       console.error('Error fetching radios:', error);
-      setError('An error occurred while loading radios.');
+      setError('An error occurred while loading radios. Please try again.');
     } finally {
       setIsLoading(false);
     }
