@@ -266,4 +266,54 @@ router.get('/mock-audio/radio/:radioId', verifyToken, (req, res) => {
   res.json({ files: mockFiles });
 });
 
+// Rota para verificar a tabela de rádios
+router.get('/check-radios', async (req, res) => {
+  try {
+    const db = require('../config/database');
+    
+    // Verificar se a tabela existe
+    const [tables] = await db.query(`
+      SELECT TABLE_NAME 
+      FROM information_schema.TABLES 
+      WHERE TABLE_SCHEMA = ? 
+      AND TABLE_NAME = 'radios'
+    `, [process.env.DB_NAME]);
+    
+    if (tables.length === 0) {
+      return res.json({
+        status: 'error',
+        message: 'Tabela radios não encontrada',
+        tables: []
+      });
+    }
+    
+    // Verificar estrutura da tabela
+    const [columns] = await db.query(`
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+      AND TABLE_NAME = 'radios'
+    `, [process.env.DB_NAME]);
+    
+    // Verificar dados
+    const [radios] = await db.query('SELECT * FROM radios');
+    
+    res.json({
+      status: 'ok',
+      tableExists: true,
+      columns: columns,
+      radioCount: radios.length,
+      radios: radios
+    });
+  } catch (error) {
+    console.error('Erro ao verificar tabela de rádios:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Erro ao verificar tabela de rádios',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 module.exports = router; 

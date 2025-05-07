@@ -65,7 +65,12 @@ router.get('/', isAuthenticated, async (req, res) => {
 router.get('/:id', isAuthenticated, async (req, res) => {
   const radioId = req.params.id;
   
+  console.log('=== GET RADIO DETAILS ===');
+  console.log('Radio ID:', radioId);
+  console.log('User:', req.user);
+  
   try {
+    console.log('Executando query para buscar rádio...');
     const [radios] = await db.query(`
       SELECT r.*, u.username as admin_username 
       FROM radios r
@@ -73,14 +78,23 @@ router.get('/:id', isAuthenticated, async (req, res) => {
       WHERE r.id = ?
     `, [radioId]);
     
+    console.log('Resultado da query:', radios);
+    
     if (radios.length === 0) {
+      console.log('Rádio não encontrado');
       return res.status(404).json({ message: 'Radio not found' });
     }
     
+    console.log('Rádio encontrado:', radios[0]);
     res.json({ radio: radios[0] });
   } catch (error) {
-    console.error('Error fetching radio:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Erro ao buscar rádio:', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
