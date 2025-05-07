@@ -95,7 +95,14 @@ export default function CreateRadioPage() {
         return;
       } catch (err) {
         console.error('Error using real endpoint:', err);
-        setError(`Radio creation failed: ${err.message}. Try using the debug endpoint.`);
+        // Enhanced error display to show more details about the server error
+        let errorMessage = `Radio creation failed: ${err.message}`;
+        if (err.status === 500) {
+          errorMessage += `. Server error detected. Please try enabling the debug endpoint checkbox above.`;
+        } else if (err.status === 401) {
+          errorMessage += `. Authentication error. Please try logging in again.`;
+        }
+        setError(errorMessage);
       }
     } catch (error) {
       console.error('Error creating radio:', error);
