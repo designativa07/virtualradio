@@ -70,23 +70,43 @@ router.get('/:id', isAuthenticated, async (req, res) => {
   console.log('User:', req.user);
   
   try {
-    console.log('Executando query para buscar rádio...');
-    const [radios] = await db.query(`
-      SELECT r.*, u.username as admin_username 
-      FROM radios r
-      JOIN users u ON r.admin_id = u.id
-      WHERE r.id = ?
-    `, [radioId]);
+    // Primeiro, verificar se o rádio existe
+    console.log('Verificando se o rádio existe...');
+    const [radioCheck] = await db.query('SELECT * FROM radios WHERE id = ?', [radioId]);
     
-    console.log('Resultado da query:', radios);
-    
-    if (radios.length === 0) {
+    if (radioCheck.length === 0) {
       console.log('Rádio não encontrado');
       return res.status(404).json({ message: 'Radio not found' });
     }
     
-    console.log('Rádio encontrado:', radios[0]);
-    res.json({ radio: radios[0] });
+    console.log('Rádio encontrado:', radioCheck[0]);
+    
+    // Depois, fazer o JOIN com a tabela users
+    console.log('Executando JOIN com a tabela users...');
+    const [radios] = await db.query(`
+      SELECT r.*, u.username as admin_username 
+      FROM radios r
+      LEFT JOIN users u ON r.admin_id = u.id
+      WHERE r.id = ?
+    `, [radioId]);
+    
+    console.log('Resultado do JOIN:', radios);
+    
+    if (radios.length === 0) {
+      console.log('Erro: Rádio não encontrado após JOIN');
+      return res.status(404).json({ message: 'Radio not found' });
+    }
+    
+    const radio = radios[0];
+    
+    // Se o admin_username for null, usar um valor padrão
+    if (!radio.admin_username) {
+      console.log('Admin username não encontrado, usando valor padrão');
+      radio.admin_username = 'Unknown Admin';
+    }
+    
+    console.log('Rádio final:', radio);
+    res.json({ radio });
   } catch (error) {
     console.error('Erro ao buscar rádio:', error);
     console.error('Stack trace:', error.stack);

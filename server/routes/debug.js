@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
+const db = require('../config/database');
 
 // JWT Secret
 const JWT_SECRET = process.env.SESSION_SECRET || 'virtualradioappsecretkey';
@@ -311,6 +312,58 @@ router.get('/check-radios', async (req, res) => {
       status: 'error',
       message: 'Erro ao verificar tabela de rádios',
       error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Check users table
+router.get('/check-users', async (req, res) => {
+  try {
+    // Check if users table exists
+    const [tables] = await db.query(`
+      SELECT TABLE_NAME 
+      FROM information_schema.TABLES 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'users'
+    `);
+    
+    const tableExists = tables.length > 0;
+    
+    if (!tableExists) {
+      return res.json({
+        status: 'error',
+        message: 'Users table does not exist'
+      });
+    }
+    
+    // Get users table structure
+    const [columns] = await db.query(`
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'users'
+    `);
+    
+    // Get user count
+    const [countResult] = await db.query('SELECT COUNT(*) as count FROM users');
+    const userCount = countResult[0].count;
+    
+    // Get all users
+    const [users] = await db.query('SELECT id, username, email, role FROM users');
+    
+    res.json({
+      status: 'ok',
+      tableExists: true,
+      columns,
+      userCount,
+      users
+    });
+  } catch (error) {
+    console.error('Error checking users table:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
