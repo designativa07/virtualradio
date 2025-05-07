@@ -87,6 +87,19 @@ export const fetchApi = async (endpoint, options = {}) => {
         throw new Error('Authentication required. Please log in again.');
       }
       
+      // Handle 500 server errors with fallback for specific endpoints
+      if (response.status === 500) {
+        console.warn('[API Server Error] 500 Internal Server Error from:', url);
+        
+        // For endpoints that should use mock data on server error
+        if (endpoint.match(/\/api\/radio\/\d+$/) || 
+            endpoint.match(/\/api\/audio\/radio\/\d+$/) ||
+            endpoint.includes('/api/debug/')) {
+          console.log('[API Fallback] Using mock data due to 500 server error');
+          return mockApiResponse(endpoint, options);
+        }
+      }
+      
       let errorData;
       try {
         errorData = await response.json();
@@ -204,6 +217,24 @@ const mockApiResponse = (endpoint, options) => {
   // Radio detail endpoint
   if (endpoint.match(/\/api\/radio\/\d+$/) && (!options.method || options.method === 'GET')) {
     const radioId = parseInt(endpoint.split('/').pop());
+    
+    // Check if this might be a newly created radio ID (high number)
+    if (radioId > 900) {
+      return {
+        success: true,
+        radio: {
+          id: radioId,
+          name: `Newly Created Radio ${radioId}`,
+          description: 'This radio was just created. This is a mock response since the server returned an error.',
+          created_at: new Date().toISOString(),
+          admin_id: 1,
+          admin_username: 'Admin'
+        },
+        isMock: true,
+        message: 'Using mock data for newly created radio due to server error'
+      };
+    }
+    
     return {
       success: true,
       radio: {
@@ -211,7 +242,8 @@ const mockApiResponse = (endpoint, options) => {
         name: `Mock Radio ${radioId}`,
         description: 'This is a mock radio station detail view',
         created_at: new Date().toISOString(),
-        admin_id: 1
+        admin_id: 1,
+        admin_username: 'Admin'
       },
       isMock: true,
       message: 'Using mock radio detail due to server unavailability'
