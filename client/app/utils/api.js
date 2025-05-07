@@ -73,8 +73,12 @@ export const fetchApi = async (endpoint, options = {}) => {
         }
         
         // For specific endpoints that need offline fallback
-        if (endpoint === '/api/auth/me' || endpoint === '/api/radio' || endpoint.includes('/api/debug/') || 
-            endpoint.match(/\/api\/radio\/\d+$/) || endpoint.match(/\/api\/audio\/radio\/\d+$/)) {
+        if (endpoint === '/api/auth/me' || 
+            endpoint === '/api/radio' || 
+            endpoint.includes('/api/debug/') || 
+            endpoint === '/api/debug/mock-radios' ||
+            endpoint.match(/\/api\/radio\/\d+$/) || 
+            endpoint.match(/\/api\/audio\/radio\/\d+$/)) {
           console.log('[API Fallback] Using mock authentication due to 401 error');
           return mockApiResponse(endpoint, options);
         }
@@ -248,6 +252,33 @@ const mockApiResponse = (endpoint, options) => {
       success: true,
       message: 'Audio file mock-deleted successfully',
       isMock: true
+    };
+  }
+  
+  // Debug mock radios endpoint
+  if (endpoint === '/api/debug/mock-radios') {
+    return {
+      success: true,
+      radios: [
+        {
+          id: 901,
+          name: 'Debug Mock Radio 1',
+          description: 'This is a debug mock radio for testing',
+          created_at: new Date().toISOString(),
+          admin_id: 1,
+          admin_username: 'Admin'
+        },
+        {
+          id: 902,
+          name: 'Debug Mock Radio 2',
+          description: 'Another debug mock radio',
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          admin_id: 1,
+          admin_username: 'Admin'
+        }
+      ],
+      isMock: true,
+      message: 'Using debug mock radio data due to server unavailability'
     };
   }
   
