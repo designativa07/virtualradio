@@ -3,53 +3,48 @@
  * In production, uses the same domain as the current page
  * In development, uses localhost:3000
  */
-export const getApiUrl = () => {
-  // Check if we're running in a browser
-  if (typeof window !== 'undefined') {
-    // Check if API_BASE_URL is defined globally (from api-config.js/api-config.local.js)
-    if (window.API_BASE_URL) {
-      return window.API_BASE_URL.replace(/\/api$/, '');
-    }
-    
-    // Production: use the same hostname as the current page
-    if (process.env.NODE_ENV === 'production') {
-      const protocol = window.location.protocol;
-      const hostname = window.location.hostname;
-      return `${protocol}//${hostname}`;
-    }
-  }
+export const getApiUrl = (endpoint) => {
+  // Se não houver endpoint, retornar apenas a URL base
+  if (!endpoint) return window.API_BASE_URL;
   
-  // Development: default to localhost:3000
-  return 'http://localhost:3000';
+  // Limpar o endpoint removendo barras extras e prefixo api
+  endpoint = endpoint.trim()
+    .replace(/^\/+/, '')  // Remove leading slashes
+    .replace(/\/+$/, '')  // Remove trailing slashes
+    .replace(/^api\/+/, ''); // Remove api prefix if present
+  
+  // Em produção, usar a mesma URL base do site
+  const baseUrl = process.env.NODE_ENV === 'production'
+    ? 'https://virtualradio.h4xd66.easypanel.host'
+    : 'http://localhost:3000';
+  
+  // Construir a URL final
+  return `${baseUrl}/api/${endpoint}`;
 };
 
 /**
  * Handles API fetch requests with error handling and authentication
  */
 export const fetchApi = async (endpoint, options = {}) => {
-  const apiUrl = getApiUrl();
-  const url = `${apiUrl}${endpoint}`;
+  const url = getApiUrl(endpoint);
+  const token = localStorage.getItem('authToken');
   
-  // Add Authorization header if token exists
-  let token = null;
-  if (typeof window !== 'undefined') {
-    token = localStorage.getItem('authToken');
-    if (token) {
-      options.headers = {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`
-      };
-    }
-  }
-  
-  // Set default headers
-  options.headers = {
+  // Configurar headers padrão
+  const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers
   };
   
+  // Configurar opções da requisição
+  const fetchOptions = {
+    ...options,
+    headers,
+    credentials: 'include'
+  };
+  
   try {
-    console.log(`[API Request] ${options.method || 'GET'} ${url} with token: ${token ? 'Present' : 'None'}`);
+    console.log(`[API Request] ${options.method || 'GET'} ${url}`);
     
     // Check if we're offline first before even trying the request
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -58,7 +53,7 @@ export const fetchApi = async (endpoint, options = {}) => {
     }
     
     // Attempt the fetch request
-    const response = await fetch(url, options);
+    const response = await fetch(url, fetchOptions);
     
     if (!response.ok) {
       console.warn(`[API Error] Request failed with status ${response.status}: ${url}`);
@@ -73,12 +68,12 @@ export const fetchApi = async (endpoint, options = {}) => {
         }
         
         // For specific endpoints that need offline fallback
-        if (endpoint === '/api/auth/me' || 
-            endpoint === '/api/radio' || 
-            endpoint.includes('/api/debug/') || 
-            endpoint === '/api/debug/mock-radios' ||
-            endpoint.match(/\/api\/radio\/\d+$/) || 
-            endpoint.match(/\/api\/audio\/radio\/\d+$/)) {
+        if (endpoint === 'auth/me' || 
+            endpoint === 'radio' || 
+            endpoint.includes('debug/') || 
+            endpoint === 'debug/mock-radios' ||
+            endpoint.match(/radio\/\d+$/) || 
+            endpoint.match(/audio\/radio\/\d+$/)) {
           console.log('[API Fallback] Using mock authentication due to 401 error');
           return mockApiResponse(endpoint, options);
         }
@@ -87,55 +82,18 @@ export const fetchApi = async (endpoint, options = {}) => {
         throw new Error('Authentication required. Please log in again.');
       }
       
-      // Handle 500 server errors with fallback for specific endpoints
-      if (response.status === 500) {
-        console.warn('[API Server Error] 500 Internal Server Error from:', url);
-        
-        // For endpoints that should use mock data on server error
-        if (endpoint.match(/\/api\/radio\/\d+$/) || 
-            endpoint.match(/\/api\/audio\/radio\/\d+$/) ||
-            endpoint.includes('/api/debug/')) {
-          console.log('[API Fallback] Using mock data due to 500 server error');
-          return mockApiResponse(endpoint, options);
-        }
-      }
-      
-      let errorData;
+      // Try to parse error response
       try {
-        errorData = await response.json();
-        console.error('[API Error] Response data:', errorData);
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'API request failed');
       } catch (e) {
-        errorData = { message: `Server error: ${response.status}` };
-        console.error('[API Error] Could not parse error response');
+        throw new Error(`API request failed with status ${response.status}`);
       }
-      
-      throw new Error(errorData.message || `API request failed with status: ${response.status}`);
     }
     
-    // Parse successful response
-    const data = await response.json();
-    console.log(`[API Success] ${options.method || 'GET'} ${url}`);
-    return data;
+    return response.json();
   } catch (error) {
-    // Handle network errors (Failed to fetch, etc)
-    const isNetworkError = 
-      error.message.includes('Failed to fetch') || 
-      error.message.includes('Network Error') ||
-      error.message.includes('NetworkError');
-    
-    if (isNetworkError) {
-      console.warn('[API Network Error] Connection failed, using mock response for:', endpoint);
-      return mockApiResponse(endpoint, options);
-    }
-    
-    // Pass through authentication errors and other handled errors
-    if (error.message.includes('Authentication required')) {
-      console.error('[API Auth Error]', error.message);
-      throw error;
-    }
-    
-    // Log and re-throw other errors
-    console.error('[API Error]', error.message, 'for endpoint:', url);
+    console.error('[API Error]', error);
     throw error;
   }
 };

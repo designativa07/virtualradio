@@ -4,13 +4,12 @@
  */
 
 // Verificar se estamos em modo de desenvolvimento local
-const isLocalDev = window.location.hostname === 'localhost' || 
-                   window.location.hostname === '127.0.0.1';
+const isLocalDev = process.env.NODE_ENV !== 'production';
 
 // Definir a URL base da API com base no ambiente
 window.API_BASE_URL = isLocalDev 
-  ? 'http://localhost:3000/api'  // Desenvolvimento local
-  : `${window.location.protocol}//${window.location.host}/api`;  // Produção
+  ? 'http://localhost:3000'  // Desenvolvimento local
+  : 'https://virtualradio.h4xd66.easypanel.host';  // Produção
 
 // Registrar no console qual ambiente está sendo usado
 console.log(`[API Config] Ambiente detectado: ${isLocalDev ? 'DESENVOLVIMENTO LOCAL' : 'PRODUÇÃO'}`);
@@ -18,11 +17,18 @@ console.log(`[API Config] Usando API base: ${window.API_BASE_URL}`);
 
 // Função para construir URLs da API
 window.getApiUrl = function(endpoint) {
-  // Remover barra inicial se presente
-  endpoint = endpoint.replace(/^\/+/, '');
-  // Remover 'api/' do início se presente
-  endpoint = endpoint.replace(/^api\//, '');
-  return `${window.API_BASE_URL}/${endpoint}`;
+  // Se não houver endpoint, retornar apenas a URL base
+  if (!endpoint) return window.API_BASE_URL;
+  
+  // Limpar o endpoint removendo barras extras e prefixo api
+  endpoint = endpoint.trim()
+    .replace(/^\/+/, '')  // Remove leading slashes
+    .replace(/\/+$/, '')  // Remove trailing slashes
+    .replace(/^api\/+/, ''); // Remove api prefix if present
+  
+  // Construir a URL final
+  const baseUrl = window.API_BASE_URL.replace(/\/+$/, ''); // Remove trailing slashes from base URL
+  return `${baseUrl}/api/${endpoint}`;
 };
 
 // Interceptar todas as chamadas de fetch para gerenciar APIs
@@ -33,7 +39,7 @@ window.getApiUrl = function(endpoint) {
     // Se for uma chamada para API
     if (typeof url === 'string' && (url.includes('/api/') || url.startsWith('/api/'))) {
       // Extrair o caminho da API, removendo qualquer prefixo /api/
-      const apiPath = url.split('/api/').pop();
+      const apiPath = url.split('/api/').pop().replace(/^\/+/, '');
       const newUrl = window.getApiUrl(apiPath);
       
       // Log para depuração

@@ -29,33 +29,25 @@ const nextConfig = {
   
   // Handle specific paths or extensions
   async rewrites() {
-    if (process.env.NODE_ENV === 'development') {
-      return [
-        {
-          source: '/api/:path*',
-          destination: 'http://localhost:3000/api/:path*',
-        },
-        {
-          source: '/uploads/:path*',
-          destination: 'http://localhost:3000/uploads/:path*',
-        },
-      ];
-    }
+    const apiBase = process.env.NODE_ENV === 'production'
+      ? 'https://virtualradio.h4xd66.easypanel.host'
+      : 'http://localhost:3000';
+
     return [
       {
         source: '/api/:path*',
-        destination: 'https://virtualradio.h4xd66.easypanel.host/api/:path*',
+        destination: `${apiBase}/api/:path*`,
       },
       {
         source: '/uploads/:path*',
-        destination: 'https://virtualradio.h4xd66.easypanel.host/uploads/:path*',
+        destination: `${apiBase}/uploads/:path*`,
       },
     ];
   },
   
   // Configurações de ambiente
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NODE_ENV === 'production' 
+    NEXT_PUBLIC_API_URL: process.env.NODE_ENV === 'production'
       ? 'https://virtualradio.h4xd66.easypanel.host'
       : 'http://localhost:3000',
   },
