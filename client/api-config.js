@@ -19,9 +19,9 @@ console.log(`[API Config] Usando API base: ${window.API_BASE_URL}`);
 // Função para construir URLs da API
 window.getApiUrl = function(endpoint) {
   // Remover barra inicial se presente
-  if (endpoint.startsWith('/')) {
-    endpoint = endpoint.substring(1);
-  }
+  endpoint = endpoint.replace(/^\/+/, '');
+  // Remover 'api/' do início se presente
+  endpoint = endpoint.replace(/^api\//, '');
   return `${window.API_BASE_URL}/${endpoint}`;
 };
 
@@ -32,12 +32,12 @@ window.getApiUrl = function(endpoint) {
   window.fetch = function(url, options = {}) {
     // Se for uma chamada para API
     if (typeof url === 'string' && (url.includes('/api/') || url.startsWith('/api/'))) {
-      // Normalizar a URL
-      const apiPath = url.split('/api/')[1];
+      // Extrair o caminho da API, removendo qualquer prefixo /api/
+      const apiPath = url.split('/api/').pop();
       const newUrl = window.getApiUrl(apiPath);
       
       // Log para depuração
-      console.log(`[API Request] ${options.method || 'GET'} ${newUrl} with token: ${options.headers?.Authorization ? 'Present' : 'None'}`);
+      console.log(`[API Request] ${options.method || 'GET'} ${newUrl}`);
       
       // Adicionar headers padrão se não existirem
       options.headers = options.headers || {};
@@ -52,37 +52,21 @@ window.getApiUrl = function(endpoint) {
       // Tentar usar a API
       return originalFetch(newUrl, options)
         .then(response => {
-          if (response.ok) {
-            console.log(`[API Success] ${options.method || 'GET'} ${newUrl}`);
-          } else {
+          if (!response.ok) {
             console.error(`[API Error] Request failed with status ${response.status}: ${newUrl}`);
+            // Se for o endpoint de autenticação e falhou, tentar fallback
+            if (apiPath === 'auth/me' && response.status === 401) {
+              return handleAuthFallback();
+            }
           }
           return response;
         })
         .catch(error => {
-          console.error(`[API Error] Request failed with status ${error.status || 'unknown'}: ${newUrl}`);
-          
-          // Em caso de erro, tentar um fallback
-          if (url.includes('/auth/me')) {
-            console.log('[API Fallback] Usando autenticação local mock para /auth/me');
-            return Promise.resolve(new Response(JSON.stringify({
-              authenticated: true,
-              user: {
-                id: 1,
-                name: 'Administrador',
-                email: 'admin@virtualradio.com',
-                role: 'admin'
-              },
-              isTest: true,
-              message: 'Autenticação local (modo offline)',
-              fallback: true
-            }), { 
-              status: 200, 
-              headers: { 'Content-Type': 'application/json' }
-            }));
+          console.error(`[API Error] Request failed: ${error.message}`);
+          // Se for o endpoint de autenticação e falhou, tentar fallback
+          if (apiPath === 'auth/me') {
+            return handleAuthFallback();
           }
-          
-          // Se não for um endpoint com fallback, retorna o erro
           return Promise.reject(error);
         });
     }
@@ -90,6 +74,26 @@ window.getApiUrl = function(endpoint) {
     // Para URLs não-API, usar fetch normal
     return originalFetch(url, options);
   };
+  
+  // Função auxiliar para lidar com fallback de autenticação
+  function handleAuthFallback() {
+    console.log('[API Fallback] Usando autenticação local mock para /auth/me');
+    return Promise.resolve(new Response(JSON.stringify({
+      authenticated: true,
+      user: {
+        id: 1,
+        name: 'Administrador',
+        email: 'admin@virtualradio.com',
+        role: 'admin'
+      },
+      isTest: true,
+      message: 'Autenticação local (modo offline)',
+      fallback: true
+    }), { 
+      status: 200, 
+      headers: { 'Content-Type': 'application/json' }
+    }));
+  }
 })();
 
 // Verificar a conexão com a API na inicialização
