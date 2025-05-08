@@ -1,41 +1,40 @@
 /**
- * Teste de Conexão com API
- * Este script simples testa a conexão com a API local ou remota
- * Pode ser executado com Node.js
+ * Script de teste para verificar a conexão com a API do VirtualRadio
+ * Execute com: node test-api-connection.js
  */
 
-// Função para testar a conexão com a API
-async function testApiConnection() {
-  const urls = [
-    'http://localhost:3000/api/auth/me',
-    'https://virtualradio.h4xd66.easypanel.host/api/auth/me'
-  ];
+const fetch = require('node-fetch');
 
-  console.log('Iniciando testes de conexão com API...');
+// URLs de teste
+const urls = [
+  'http://localhost:3000/api/test',
+  'http://localhost:3000/api/auth/me',
+  'http://localhost:3000/api/debug/status',
+  'http://localhost:3000/db-status',
+  'http://localhost:3000/health'
+];
+
+async function testConnection() {
+  console.log('Testando conexão com a API...\n');
 
   for (const url of urls) {
     try {
-      console.log(`\nTestando conexão com: ${url}`);
+      console.log(`Testando: ${url}`);
+      const response = await fetch(url);
+      const status = response.status;
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          // Adicionando um token fake para testar
-          'Authorization': 'Bearer test-token'
-        }
-      });
-
-      const data = await response.json();
-      console.log(`Status: ${response.status}`);
-      console.log('Resposta:', data);
+      console.log(`Status: ${status}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`Resposta: ${JSON.stringify(data, null, 2)}\n`);
+      } else {
+        console.log(`Erro: ${response.statusText}\n`);
+      }
     } catch (error) {
-      console.error(`Erro ao conectar com ${url}:`, error.message);
+      console.error(`Falha ao se conectar: ${error.message}\n`);
     }
   }
 }
 
-// Executar o teste
-testApiConnection().then(() => {
-  console.log('\nTestes de conexão concluídos.');
-}); 
+testConnection(); 

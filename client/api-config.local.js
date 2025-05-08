@@ -1,18 +1,18 @@
 /**
- * Local API Configuration for VirtualRadio
- * This file configures the connection to the local test server
+ * Configuração local da API do VirtualRadio
+ * Este arquivo é usado apenas em ambiente de desenvolvimento local
  */
 
-// Define the API base URL for local development
+// Definir a URL base da API local
 window.API_BASE_URL = 'http://localhost:3000/api';
 
-// Function to build API URLs
+// Função para construir URLs da API
 window.getApiUrl = function(endpoint) {
-  // Remove leading slash if present
-  if (endpoint && endpoint.startsWith('/')) {
+  // Remover barra inicial se presente
+  if (endpoint.startsWith('/')) {
     endpoint = endpoint.substring(1);
   }
-  return `${window.API_BASE_URL}/${endpoint || ''}`;
+  return `${window.API_BASE_URL}/${endpoint}`;
 };
 
 // Intercept all fetch calls to handle API requests
@@ -67,4 +67,4 @@ window.getApiUrl = function(endpoint) {
   };
 })();
 
-console.log('[API Config] Local API configuration loaded successfully, using:', window.API_BASE_URL); 
+console.log('[API Config] Local API configuration loaded, using:', window.API_BASE_URL); 
