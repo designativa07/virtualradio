@@ -74,8 +74,22 @@ async function setupServer() {
   const app = express();
 
   // Middleware
+  const allowedOrigins = process.env.NODE_ENV === 'production'
+    ? ['https://virtualradio.h4xd66.easypanel.host']
+    : ['http://localhost:3000'];
+
   app.use(cors({
-    origin: ['http://localhost:3001', 'http://localhost:3000'],
+    origin: function(origin, callback) {
+      // Permitir requisições sem origin (como apps mobile ou Postman)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.warn(`Origin não permitida: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true  // Importante: Permite envio de cookies em requisições CORS

@@ -26,8 +26,9 @@ SESSION_SECRET=virtual_radio_secret_key_2024
 
 ## URLs
 
+Para desenvolvimento local:
 ```
-CLIENT_URL=http://localhost:3001
+CLIENT_URL=http://localhost:3000
 ```
 
 ## Como criar o arquivo
@@ -39,9 +40,19 @@ CLIENT_URL=http://localhost:3001
 
 ## Ambiente de Produção
 
-Em ambiente de produção, ajuste as configurações conforme necessário, especialmente:
+Em ambiente de produção, ajuste as configurações conforme necessário:
 
 ```
 NODE_ENV=production
-CLIENT_URL=[URL de produção do cliente]
+PORT=3000
+CLIENT_URL=https://virtualradio.h4xd66.easypanel.host
+
+# Configurações do Banco de Dados de Produção
+DB_HOST=seu_host_de_producao
+DB_USER=seu_usuario_de_producao
+DB_PASS=sua_senha_de_producao
+DB_NAME=seu_banco_de_producao
+
+# Chave de Sessão Segura (mude para uma string aleatória forte)
+SESSION_SECRET=chave_secreta_forte_e_aleatoria
 ``` 
