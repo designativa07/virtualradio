@@ -1,82 +1,66 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-
-// Função para obter a URL base da API
-const getApiUrl = () => {
-  // Forçar uso do localhost:3000
-  return 'http://localhost:3000';
-};
+import { fetchApi } from '../app/utils/api';
 
 export default function AudioUploadForm({ radioId, onSuccess }) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [title, setTitle] = useState('');
+  const [file, setFile] = useState(null);
+  const [type, setType] = useState('music'); // 'music' ou 'spot'
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
-  const [fileName, setFileName] = useState('');
-  
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
-  
-  const onSubmit = async (data) => {
-    setIsLoading(true);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError('');
     
+    if (!file) {
+      setError('Por favor, selecione um arquivo de áudio');
+      return;
+    }
+
+    if (!title) {
+      setError('Por favor, insira um título para o arquivo');
+      return;
+    }
+
+    // Verificar o tipo do arquivo
+    const fileType = file.type;
+    if (!fileType.startsWith('audio/')) {
+      setError('Por favor, selecione apenas arquivos de áudio');
+      return;
+    }
+
+    setIsUploading(true);
+
     try {
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setError('Authentication token not found. Please log in again.');
-        return;
-      }
-      
       const formData = new FormData();
-      formData.append('audio', data.audio[0]);
-      formData.append('title', data.title);
-      formData.append('type', data.type);
-      formData.append('radioId', radioId);
-      
-      const response = await fetch(`${getApiUrl()}/api/audio/upload`, {
+      formData.append('title', title);
+      formData.append('file', file);
+      formData.append('type', type);
+      formData.append('file_type', fileType);
+      formData.append('radio_id', radioId);
+
+      await fetchApi('/api/audio/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData,
+        body: formData
       });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        setError(result.message || 'Upload failed');
-        return;
-      }
-      
-      // Reset form
-      reset();
-      setFileName('');
-      
-      // Notify parent component
-      if (onSuccess) {
-        onSuccess();
-      }
+
+      setTitle('');
+      setFile(null);
+      setType('music');
+      if (onSuccess) onSuccess();
     } catch (error) {
-      setError('An error occurred. Please try again.');
-      console.error('Upload error:', error);
+      console.error('Error uploading audio:', error);
+      setError(error.message || 'Erro ao fazer upload do arquivo');
     } finally {
-      setIsLoading(false);
+      setIsUploading(false);
     }
   };
-  
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFileName(file.name);
-    } else {
-      setFileName('');
-    }
-  };
-  
+
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-4">Upload Audio</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-semibold mb-4">Upload de Áudio</h2>
       
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
@@ -84,67 +68,62 @@ export default function AudioUploadForm({ radioId, onSuccess }) {
         </div>
       )}
       
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="title" className="form-label">Title</label>
+          <label className="block text-sm font-medium mb-2">
+            Título
+          </label>
           <input
-            id="title"
             type="text"
-            className="form-input"
-            {...register('title', { required: 'Title is required' })}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder="Nome do arquivo de áudio"
+            required
           />
-          {errors.title && (
-            <p className="form-error">{errors.title.message}</p>
-          )}
         </div>
         
         <div>
-          <label htmlFor="type" className="form-label">Type</label>
+          <label className="block text-sm font-medium mb-2">
+            Tipo de Áudio
+          </label>
           <select
-            id="type"
-            className="form-input"
-            {...register('type', { required: 'Type is required' })}
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md"
+            required
           >
-            <option value="">Select type</option>
-            <option value="music">Music</option>
+            <option value="music">Música</option>
             <option value="spot">Spot</option>
           </select>
-          {errors.type && (
-            <p className="form-error">{errors.type.message}</p>
-          )}
         </div>
         
         <div>
-          <label htmlFor="audio" className="form-label">Audio File (MP3, WAV, OGG)</label>
-          <div className="flex items-center space-x-2 mt-1">
-            <label className="btn btn-secondary cursor-pointer">
-              <span>Choose File</span>
-              <input
-                id="audio"
-                type="file"
-                className="hidden"
-                accept=".mp3,.wav,.ogg"
-                {...register('audio', { 
-                  required: 'Audio file is required',
-                  onChange: handleFileChange
-                })}
-              />
-            </label>
-            <span className="text-gray-600 dark:text-gray-300 truncate">
-              {fileName || 'No file chosen'}
-            </span>
-          </div>
-          {errors.audio && (
-            <p className="form-error mt-1">{errors.audio.message}</p>
-          )}
+          <label className="block text-sm font-medium mb-2">
+            Arquivo de Áudio
+          </label>
+          <input
+            type="file"
+            accept="audio/*"
+            onChange={(e) => setFile(e.target.files[0])}
+            className="w-full px-3 py-2 border rounded-md"
+            required
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Formatos aceitos: MP3, WAV, OGG
+          </p>
         </div>
         
         <button
           type="submit"
-          className="btn btn-primary"
-          disabled={isLoading}
+          disabled={isUploading}
+          className={`w-full px-4 py-2 rounded-md text-white ${
+            isUploading 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-primary hover:bg-primary-dark'
+          }`}
         >
-          {isLoading ? 'Uploading...' : 'Upload Audio'}
+          {isUploading ? 'Enviando...' : 'Enviar Áudio'}
         </button>
       </form>
     </div>
