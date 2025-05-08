@@ -90,8 +90,8 @@ router.get('/db-status', async (req, res) => {
 });
 
 // Mock radios endpoint that doesn't need database
-router.get('/mock-radios', verifyToken, (req, res) => {
-  console.log('Debug: Authenticated user for mock-radios:', req.user);
+router.get('/mock-radios', (req, res) => {
+  console.log('Debug: Accessing mock-radios (no auth required)');
   
   // Generate some mock radio data
   const mockRadios = [
@@ -99,25 +99,29 @@ router.get('/mock-radios', verifyToken, (req, res) => {
       id: 1,
       name: 'Mock Radio 1',
       description: 'This is a mock radio for debugging',
-      admin_id: req.user.id,
-      admin_username: req.user.username || 'Admin',
+      admin_id: 1,
+      admin_username: 'Admin',
       created_at: new Date().toISOString()
     },
     {
       id: 2,
       name: 'Mock Radio 2',
       description: 'Another mock radio for testing',
-      admin_id: req.user.id,
-      admin_username: req.user.username || 'Admin',
+      admin_id: 1,
+      admin_username: 'Admin',
       created_at: new Date().toISOString()
     }
   ];
   
-  res.json({ radios: mockRadios });
+  res.json({ 
+    radios: mockRadios,
+    message: 'Mock data provided for debugging purposes',
+    isMock: true
+  });
 });
 
 // Mock radio creation endpoint that doesn't need database
-router.post('/mock-radio', verifyToken, (req, res) => {
+router.post('/mock-radio', (req, res) => {
   console.log('Debug: Creating mock radio with data:', req.body);
   
   const { name, description } = req.body;
@@ -133,12 +137,13 @@ router.post('/mock-radio', verifyToken, (req, res) => {
     message: 'Radio created successfully (mock)',
     radioId: mockRadioId,
     mockData: true,
+    isMock: true,
     radio: {
       id: mockRadioId,
       name: name,
       description: description || '',
-      admin_id: req.user.id,
-      admin_username: req.user.username || 'Admin',
+      admin_id: 1,
+      admin_username: 'Admin',
       created_at: new Date().toISOString()
     }
   });
@@ -214,7 +219,7 @@ router.get('/env', (req, res) => {
 });
 
 // Mock single radio endpoint that doesn't need database
-router.get('/mock-radio/:id', verifyToken, (req, res) => {
+router.get('/mock-radio/:id', (req, res) => {
   const radioId = req.params.id;
   console.log('Debug: Fetching mock radio with ID:', radioId);
   
@@ -223,16 +228,20 @@ router.get('/mock-radio/:id', verifyToken, (req, res) => {
     id: parseInt(radioId),
     name: `Mock Radio ${radioId}`,
     description: `This is a mock radio for debugging with ID ${radioId}`,
-    admin_id: req.user.id,
-    admin_username: req.user.username || 'Admin',
+    admin_id: 1,
+    admin_username: 'Admin',
     created_at: new Date().toISOString()
   };
   
-  res.json({ radio: mockRadio });
+  res.json({ 
+    radio: mockRadio,
+    message: 'Mock radio data provided for debugging purposes',
+    isMock: true 
+  });
 });
 
 // Mock audio files for a radio
-router.get('/mock-audio/radio/:radioId', verifyToken, (req, res) => {
+router.get('/mock-audio/radio/:radioId', (req, res) => {
   const radioId = req.params.radioId;
   console.log('Debug: Fetching mock audio files for radio ID:', radioId);
   
@@ -264,7 +273,11 @@ router.get('/mock-audio/radio/:radioId', verifyToken, (req, res) => {
     }
   ];
   
-  res.json({ files: mockFiles });
+  res.json({ 
+    files: mockFiles,
+    message: 'Mock audio files provided for debugging purposes',
+    isMock: true 
+  });
 });
 
 // Rota para verificar a tabela de rádios
