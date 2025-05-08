@@ -369,4 +369,60 @@ router.get('/check-users', async (req, res) => {
   }
 });
 
+// Check audio_files table
+router.get('/check-audio-files', async (req, res) => {
+  try {
+    // Check if audio_files table exists
+    const [tables] = await db.query(`
+      SELECT TABLE_NAME 
+      FROM information_schema.TABLES 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'audio_files'
+    `);
+    
+    const tableExists = tables.length > 0;
+    
+    if (!tableExists) {
+      return res.json({
+        status: 'error',
+        message: 'Audio files table does not exist'
+      });
+    }
+    
+    // Get audio_files table structure
+    const [columns] = await db.query(`
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'audio_files'
+    `);
+    
+    // Get audio files count
+    const [countResult] = await db.query('SELECT COUNT(*) as count FROM audio_files');
+    const audioFilesCount = countResult[0].count;
+    
+    // Get all audio files
+    const [audioFiles] = await db.query(`
+      SELECT af.*, u.username as uploaded_by_username
+      FROM audio_files af
+      LEFT JOIN users u ON af.uploaded_by = u.id
+    `);
+    
+    res.json({
+      status: 'ok',
+      tableExists: true,
+      columns,
+      audioFilesCount,
+      audioFiles
+    });
+  } catch (error) {
+    console.error('Error checking audio_files table:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 module.exports = router; 
