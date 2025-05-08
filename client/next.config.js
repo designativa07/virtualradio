@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuração básica
-  output: process.env.NODE_ENV === 'production' ? undefined : undefined,
+  // Configurações gerais
+  reactStrictMode: false,
+  distDir: '.next',
+  images: {
+    unoptimized: true,
+  },
+  trailingSlash: true,
   
   // Configure Content Security Policy (CSP)
   async headers() {
@@ -37,31 +42,6 @@ const nextConfig = {
       ];
     }
     return [];
-  },
-  
-  // Configurações gerais
-  reactStrictMode: false,
-  distDir: '.next',
-  images: {
-    unoptimized: true,
-  },
-  trailingSlash: true,
-  
-  // Configurações de produção
-  poweredByHeader: false,
-  generateEtags: true,
-  compress: true,
-  
-  // Configurações de cache
-  onDemandEntries: {
-    maxInactiveAge: 25 * 1000,
-    pagesBufferLength: 2,
-  },
-
-  // Configurações de build
-  swcMinify: true,
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
   },
   
   // Configurações de ambiente
