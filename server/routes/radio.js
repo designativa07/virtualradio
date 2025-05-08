@@ -105,6 +105,24 @@ router.get('/:id', isAuthenticated, async (req, res) => {
       radio.admin_username = 'Unknown Admin';
     }
     
+    // Buscar os arquivos de áudio
+    console.log('Buscando arquivos de áudio...');
+    const [audioFiles] = await db.query(`
+      SELECT af.*, u.username as uploaded_by_username
+      FROM audio_files af
+      LEFT JOIN users u ON af.uploaded_by = u.id
+      WHERE af.radio_id = ?
+      ORDER BY af.created_at DESC
+    `, [radioId]);
+    
+    console.log('Arquivos de áudio encontrados:', audioFiles.length);
+    
+    // Adicionar os arquivos de áudio ao objeto do rádio
+    radio.audioFiles = audioFiles.map(file => ({
+      ...file,
+      uploaded_by_username: file.uploaded_by_username || 'Unknown User'
+    }));
+    
     console.log('Rádio final:', radio);
     res.json({ radio });
   } catch (error) {
