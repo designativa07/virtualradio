@@ -81,7 +81,11 @@ async function setupServer() {
     },
     credentials: true  // Importante: Permite envio de cookies em requisições CORS
   }));
-  app.use(express.json());
+  
+  // Aumentar o limite do body parser para arquivos grandes
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  
   app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
     useTempFiles: true,
