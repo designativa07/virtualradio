@@ -10,7 +10,7 @@ const isLocalDev = window.location.hostname === 'localhost' ||
 // Definir a URL base da API com base no ambiente
 window.API_BASE_URL = isLocalDev 
   ? 'http://localhost:3000/api'  // Desenvolvimento local
-  : 'https://virtualradio.h4xd66.easypanel.host/api';  // Produção
+  : `${window.location.protocol}//${window.location.host}/api`;  // Produção
 
 // Registrar no console qual ambiente está sendo usado
 console.log(`[API Config] Ambiente detectado: ${isLocalDev ? 'DESENVOLVIMENTO LOCAL' : 'PRODUÇÃO'}`);
@@ -34,10 +34,10 @@ window.getApiUrl = function(endpoint) {
     if (typeof url === 'string' && (url.includes('/api/') || url.startsWith('/api/'))) {
       // Normalizar a URL
       const apiPath = url.split('/api/')[1];
-      const newUrl = `${window.API_BASE_URL}/${apiPath}`;
+      const newUrl = window.getApiUrl(apiPath);
       
       // Log para depuração
-      console.log(`[API Request] ${url} -> ${newUrl}`);
+      console.log(`[API Request] ${options.method || 'GET'} ${newUrl} with token: ${options.headers?.Authorization ? 'Present' : 'None'}`);
       
       // Adicionar headers padrão se não existirem
       options.headers = options.headers || {};
@@ -52,11 +52,15 @@ window.getApiUrl = function(endpoint) {
       // Tentar usar a API
       return originalFetch(newUrl, options)
         .then(response => {
-          console.log(`[API Response] ${newUrl} - Status: ${response.status}`);
+          if (response.ok) {
+            console.log(`[API Success] ${options.method || 'GET'} ${newUrl}`);
+          } else {
+            console.error(`[API Error] Request failed with status ${response.status}: ${newUrl}`);
+          }
           return response;
         })
         .catch(error => {
-          console.error(`[API Error] Falha ao conectar com ${newUrl}:`, error.message);
+          console.error(`[API Error] Request failed with status ${error.status || 'unknown'}: ${newUrl}`);
           
           // Em caso de erro, tentar um fallback
           if (url.includes('/auth/me')) {
@@ -78,22 +82,6 @@ window.getApiUrl = function(endpoint) {
             }));
           }
           
-          // Se o servidor local estiver indisponível em desenvolvimento, tentar API remota
-          if (isLocalDev && error.message.includes('Failed to fetch')) {
-            console.log('[API Fallback] Servidor local indisponível, tentando API remota');
-            const remoteUrl = `https://virtualradio.h4xd66.easypanel.host/api/${apiPath}`;
-            
-            return originalFetch(remoteUrl, options)
-              .then(response => {
-                console.log(`[API Remote Fallback] ${remoteUrl} - Status: ${response.status}`);
-                return response;
-              })
-              .catch(remoteError => {
-                console.error(`[API Remote Fallback Error] ${remoteUrl}:`, remoteError.message);
-                return Promise.reject(error); // Retornar o erro original
-              });
-          }
-          
           // Se não for um endpoint com fallback, retorna o erro
           return Promise.reject(error);
         });
@@ -105,28 +93,12 @@ window.getApiUrl = function(endpoint) {
 })();
 
 // Verificar a conexão com a API na inicialização
-fetch(window.API_BASE_URL + '/test')
+fetch(window.getApiUrl('test'))
   .then(response => response.json())
   .then(data => {
     console.log('[API Test] Conexão com API estabelecida com sucesso:', data);
   })
   .catch(error => {
     console.error('[API Test] Falha ao conectar com a API:', error.message);
-    
-    if (isLocalDev) {
-      console.warn('[API Warning] API local indisponível. Tentando usar a API remota como fallback.');
-      
-      // Tentar API remota como fallback
-      fetch('https://virtualradio.h4xd66.easypanel.host/api/test')
-        .then(response => response.json())
-        .then(data => {
-          console.log('[API Test] Conexão com API remota estabelecida com sucesso:', data);
-          window.API_BASE_URL = 'https://virtualradio.h4xd66.easypanel.host/api';
-          console.log('[API Config] Alterado para API remota:', window.API_BASE_URL);
-        })
-        .catch(remoteError => {
-          console.error('[API Test] Falha ao conectar com a API remota:', remoteError.message);
-          console.warn('[API Warning] Aplicativo funcionará no modo offline com dados mockados.');
-        });
-    }
+    console.warn('[API Warning] Aplicativo funcionará no modo offline com dados mockados.');
   }); 
