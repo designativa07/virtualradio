@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Configuração básica
-  output: 'standalone',
+  output: process.env.NODE_ENV === 'production' ? undefined : undefined,
   
   // Configure Content Security Policy (CSP)
   async headers() {
