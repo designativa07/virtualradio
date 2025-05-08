@@ -20,6 +20,9 @@ export default function RadioDetail({ params }) {
   const [selectedAudio, setSelectedAudio] = useState(null);
   const [usingMockData, setUsingMockData] = useState(false);
   const [showRadioPlayer, setShowRadioPlayer] = useState(false);
+  const [fadeOutDuration, setFadeOutDuration] = useState(5); // duração do fade out em segundos
+  const [backgroundVolume, setBackgroundVolume] = useState(0.3); // volume da música de fundo (0-1)
+  const [spotVolume, setSpotVolume] = useState(1); // volume do spot (0-1)
 
   useEffect(() => {
     // Set the radioId from params safely
@@ -166,6 +169,23 @@ export default function RadioDetail({ params }) {
     return user.role === 'system_admin' || user.id === radio.admin_id || user.role === 'admin';
   };
   
+  const handleDeleteRadio = async () => {
+    if (!confirm('Tem certeza que deseja excluir esta rádio? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    try {
+      await fetchApi(`/api/radio/${radioId}`, {
+        method: 'DELETE'
+      });
+
+      router.push('/radios');
+    } catch (error) {
+      console.error('Error deleting radio:', error);
+      setError('Erro ao excluir rádio: ' + error.message);
+    }
+  };
+  
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
@@ -189,33 +209,100 @@ export default function RadioDetail({ params }) {
     <div>
       {usingMockData && (
         <div className="mb-6 p-4 bg-yellow-100 text-yellow-700 rounded-md">
-          <p>⚠️ Using mock data due to database connection issues. Changes you make will not be permanently saved.</p>
+          <p>⚠️ Usando dados mockados devido a problemas de conexão com o banco de dados.</p>
         </div>
       )}
       
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center">
           <Link href="/radios" className="text-primary hover:underline mr-4">
-            ← Back to Radios
+            ← Voltar para Rádios
           </Link>
           <h1 className="text-3xl font-bold">{radio.name}</h1>
         </div>
         
-        <button
-          onClick={toggleRadioPlayer}
-          className={`px-4 py-2 rounded-md ${showRadioPlayer ? 'bg-gray-200 text-gray-800' : 'bg-primary text-white'}`}
-        >
-          {showRadioPlayer ? 'Hide Radio Player' : 'Start Radio Station'}
-        </button>
+        <div className="flex gap-4">
+          {isAdmin() && (
+            <>
+              <Link
+                href={`/radios/${radioId}/edit`}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              >
+                Editar Rádio
+              </Link>
+              <button
+                onClick={handleDeleteRadio}
+                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+              >
+                Excluir Rádio
+              </button>
+            </>
+          )}
+          <button
+            onClick={toggleRadioPlayer}
+            className={`px-4 py-2 rounded-md ${showRadioPlayer ? 'bg-gray-200 text-gray-800' : 'bg-primary text-white'}`}
+          >
+            {showRadioPlayer ? 'Ocultar Player' : 'Iniciar Rádio'}
+          </button>
+        </div>
       </div>
       
       {showRadioPlayer && audioFiles.length > 0 && (
         <div className="mb-8">
-          <RadioPlayer 
-            stationName={radio.name}
-            audioFiles={audioFiles}
-            autoplay={true}
-          />
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Controles de Volume</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Duração do Fade Out (segundos)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={fadeOutDuration}
+                  onChange={(e) => setFadeOutDuration(Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Volume da Música de Fundo (0-1)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={backgroundVolume}
+                  onChange={(e) => setBackgroundVolume(Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Volume do Spot (0-1)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={spotVolume}
+                  onChange={(e) => setSpotVolume(Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-md"
+                />
+              </div>
+            </div>
+            <RadioPlayer 
+              stationName={radio.name}
+              audioFiles={audioFiles}
+              autoplay={true}
+              fadeOutDuration={fadeOutDuration}
+              backgroundVolume={backgroundVolume}
+              spotVolume={spotVolume}
+            />
+          </div>
         </div>
       )}
       
