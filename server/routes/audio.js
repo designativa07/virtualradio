@@ -111,51 +111,70 @@ router.post('/upload', isAuthenticated, isRadioAdmin, async (req, res) => {
   console.log('Audio upload: Request body keys:', Object.keys(req.body));
   console.log('Audio upload: Request files:', req.files ? Object.keys(req.files) : 'No files');
   
-  if (!req.files || !req.files.file) {
-    console.log('Audio upload: No file found in request');
-    return res.status(400).json({ 
-      message: 'No file uploaded',
-      requestInfo: {
-        hasFiles: !!req.files,
-        fileKeys: req.files ? Object.keys(req.files) : []
-      }
-    });
-  }
-  
-  const { file } = req.files;
-  console.log('Audio upload: File received:', file.name, file.mimetype, file.size);
-  
-  // Support both radioId and radio_id for compatibility
-  const radioId = req.body.radio_id || req.body.radioId;
-  const { title, type } = req.body;
-  
-  console.log('Audio upload: Form data:', { title, type, radioId });
-  
-  if (!title || !type || !radioId) {
-    console.log('Audio upload: Missing required fields');
-    return res.status(400).json({ 
-      message: 'Missing required fields',
-      received: { 
-        title: !!title, 
-        type: !!type, 
-        radioId: !!radioId 
-      }
-    });
-  }
-  
-  // Validate file type
-  if (!file.name.match(/\.(mp3|wav|ogg)$/)) {
-    console.log('Audio upload: Unsupported file format:', file.name);
-    return res.status(400).json({ message: 'Unsupported file format' });
-  }
-  
   try {
+    // Check if files object exists
+    if (!req.files || !req.files.file) {
+      console.log('Audio upload: No file found in request');
+      return res.status(400).json({ 
+        message: 'No file uploaded',
+        requestInfo: {
+          hasFiles: !!req.files,
+          fileKeys: req.files ? Object.keys(req.files) : []
+        }
+      });
+    }
+    
+    const { file } = req.files;
+    console.log('Audio upload: File received:', file.name, file.mimetype, file.size);
+    
+    // Support both radioId and radio_id for compatibility
+    const radioId = req.body.radio_id || req.body.radioId;
+    const { title, type } = req.body;
+    
+    console.log('Audio upload: Form data:', { title, type, radioId });
+    
+    if (!title || !type || !radioId) {
+      console.log('Audio upload: Missing required fields');
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        received: { 
+          title: !!title, 
+          type: !!type, 
+          radioId: !!radioId 
+        }
+      });
+    }
+    
+    // Validate file type
+    if (!file.name.match(/\.(mp3|wav|ogg)$/)) {
+      console.log('Audio upload: Unsupported file format:', file.name);
+      return res.status(400).json({ message: 'Unsupported file format' });
+    }
+    
     console.log('Audio upload: Creating uploads directory if needed');
     // Create directory for radio if it doesn't exist
-    const uploadDir = path.join(__dirname, '../../uploads', radioId.toString());
+    const rootUploadDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(rootUploadDir)) {
+      fs.mkdirSync(rootUploadDir, { recursive: true });
+      console.log('Audio upload: Created root uploads directory:', rootUploadDir);
+    }
+    
+    const uploadDir = path.join(rootUploadDir, radioId.toString());
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
-      console.log('Audio upload: Created directory:', uploadDir);
+      console.log('Audio upload: Created radio uploads directory:', uploadDir);
+    }
+    
+    // Check write permissions
+    try {
+      fs.accessSync(uploadDir, fs.constants.W_OK);
+      console.log('Audio upload: Directory is writable');
+    } catch (error) {
+      console.error('Audio upload: Directory is not writable:', error);
+      return res.status(500).json({ 
+        message: 'Server configuration error: upload directory is not writable',
+        error: error.message
+      });
     }
     
     // Save file
@@ -163,27 +182,54 @@ router.post('/upload', isAuthenticated, isRadioAdmin, async (req, res) => {
     const filePath = path.join(uploadDir, fileName);
     
     console.log('Audio upload: Saving file to:', filePath);
-    await file.mv(filePath);
-    console.log('Audio upload: File saved successfully');
+    try {
+      await file.mv(filePath);
+      console.log('Audio upload: File saved successfully');
+    } catch (fileError) {
+      console.error('Audio upload: Error saving file:', fileError);
+      return res.status(500).json({ 
+        message: 'Error saving file to disk',
+        error: fileError.message,
+        stack: process.env.NODE_ENV === 'development' ? fileError.stack : undefined
+      });
+    }
     
     // Save to database
     console.log('Audio upload: Saving to database');
-    const [result] = await db.query(
-      'INSERT INTO audio_files (radio_id, title, type, file_path, file_type, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [radioId, title, type, `uploads/${radioId}/${fileName}`, file.mimetype, req.user.id]
-    );
-    console.log('Audio upload: Database insert success, ID:', result.insertId);
-    
-    res.status(201).json({
-      message: 'File uploaded successfully',
-      fileId: result.insertId,
-      filePath: `uploads/${radioId}/${fileName}`
-    });
+    try {
+      const [result] = await db.query(
+        'INSERT INTO audio_files (radio_id, title, type, file_path, file_type, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)',
+        [radioId, title, type, `uploads/${radioId}/${fileName}`, file.mimetype, req.user.id]
+      );
+      console.log('Audio upload: Database insert success, ID:', result.insertId);
+      
+      res.status(201).json({
+        message: 'File uploaded successfully',
+        fileId: result.insertId,
+        filePath: `uploads/${radioId}/${fileName}`
+      });
+    } catch (dbError) {
+      console.error('Audio upload: Database error:', dbError);
+      
+      // Try to delete the file if database insertion fails
+      try {
+        fs.unlinkSync(filePath);
+        console.log('Audio upload: Removed file after database error');
+      } catch (unlinkError) {
+        console.error('Audio upload: Could not remove file after database error:', unlinkError);
+      }
+      
+      return res.status(500).json({ 
+        message: 'Error saving file information to database',
+        error: dbError.message,
+        stack: process.env.NODE_ENV === 'development' ? dbError.stack : undefined
+      });
+    }
   } catch (error) {
-    console.error('Audio upload: Error:', error.message);
+    console.error('Audio upload: Unhandled error:', error.message);
     console.error(error.stack);
     res.status(500).json({ 
-      message: 'Error uploading file',
+      message: 'Server error processing upload',
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });

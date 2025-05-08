@@ -215,6 +215,10 @@ router.put('/:id', isAdminOrSystemAdmin, async (req, res) => {
   const { name, description } = req.body;
   const userId = req.user.id; // Use JWT user data
   
+  console.log('Updating radio:', radioId);
+  console.log('Request body:', req.body);
+  console.log('User ID:', userId);
+  
   try {
     // Check if the user is the radio admin or a system admin
     const [radios] = await db.query(
@@ -223,24 +227,50 @@ router.put('/:id', isAdminOrSystemAdmin, async (req, res) => {
     );
     
     if (radios.length === 0) {
+      console.log('Radio not found:', radioId);
       return res.status(404).json({ message: 'Radio not found' });
     }
     
     const radio = radios[0];
     
     if (req.user.role !== 'system_admin' && req.user.role !== 'admin' && radio.admin_id !== userId) {
+      console.log('Access denied. User role:', req.user.role, 'Radio admin ID:', radio.admin_id);
       return res.status(403).json({ message: 'Access denied' });
     }
     
+    // Update the radio
     await db.query(
       'UPDATE radios SET name = ?, description = ? WHERE id = ?',
       [name, description, radioId]
     );
     
-    res.json({ message: 'Radio updated successfully' });
+    // Fetch the updated radio
+    const [updatedRadios] = await db.query(`
+      SELECT r.*, u.username as admin_username 
+      FROM radios r
+      LEFT JOIN users u ON r.admin_id = u.id
+      WHERE r.id = ?
+    `, [radioId]);
+    
+    if (updatedRadios.length === 0) {
+      console.log('Error: Updated radio not found');
+      return res.status(500).json({ message: 'Radio updated but could not retrieve updated data' });
+    }
+    
+    console.log('Radio updated successfully:', updatedRadios[0]);
+    
+    res.json({ 
+      message: 'Radio updated successfully',
+      success: true,
+      radio: updatedRadios[0]
+    });
   } catch (error) {
     console.error('Error updating radio:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

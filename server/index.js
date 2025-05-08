@@ -75,10 +75,9 @@ async function setupServer() {
 
   // Middleware
   app.use(cors({
-    origin: function(origin, callback) {
-      // Permitir qualquer origem, inclusive chamadas locais
-      return callback(null, true);
-    },
+    origin: ['http://localhost:3001', 'http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true  // Importante: Permite envio de cookies em requisições CORS
   }));
   
