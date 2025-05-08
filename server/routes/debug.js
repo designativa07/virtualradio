@@ -438,4 +438,72 @@ router.get('/check-audio-files', async (req, res) => {
   }
 });
 
+// Debug audio upload endpoint that doesn't need authentication
+router.post('/audio-upload', async (req, res) => {
+  console.log('Debug: Audio upload request received');
+  console.log('Debug: Request body:', req.body);
+  console.log('Debug: Request files:', req.files ? Object.keys(req.files) : 'No files');
+  
+  try {
+    if (!req.files || !req.files.file) {
+      console.log('Debug: No file found in request');
+      return res.status(400).json({
+        message: 'No file uploaded',
+        requestBody: req.body,
+        filesKeys: req.files ? Object.keys(req.files) : []
+      });
+    }
+    
+    const { file } = req.files;
+    const { title, type, radio_id } = req.body;
+    const radioId = radio_id || req.body.radioId || '999'; // Default for testing
+    
+    console.log('Debug: File details:', {
+      filename: file.name,
+      size: file.size,
+      mimetype: file.mimetype
+    });
+    
+    console.log('Debug: Form data:', { title, type, radioId });
+    
+    // Create mock uploads directory
+    const uploadDir = path.join(__dirname, '../../uploads/debug');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    // Save file with timestamp to avoid conflicts
+    const fileName = `${Date.now()}_debug_${file.name.replace(/\s+/g, '_')}`;
+    const filePath = path.join(uploadDir, fileName);
+    
+    await file.mv(filePath);
+    console.log('Debug: File saved to:', filePath);
+    
+    // Return success response
+    res.status(201).json({
+      message: 'File uploaded successfully (debug mode)',
+      debug: true,
+      file: {
+        originalName: file.name,
+        savedAs: fileName,
+        path: `uploads/debug/${fileName}`,
+        size: file.size,
+        mimetype: file.mimetype
+      },
+      requestDetails: {
+        title: title || 'No title provided',
+        type: type || 'No type provided',
+        radioId: radioId
+      }
+    });
+  } catch (error) {
+    console.error('Debug: Error in audio upload:', error);
+    res.status(500).json({
+      message: 'Error uploading file in debug mode',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 module.exports = router; 
