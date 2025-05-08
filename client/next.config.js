@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static HTML export
-  output: process.env.NEXT_EXPORT === 'true' ? 'export' : undefined,
+  // Configuração para produção
+  output: 'standalone',
   
   // Configure Content Security Policy (CSP)
   async headers() {
@@ -44,14 +44,24 @@ const nextConfig = {
     return [];
   },
   
-  // Disable React StrictMode for development
+  // Configurações gerais
   reactStrictMode: false,
-  // Configuração para exportação estática
   distDir: '.next',
   images: {
-    unoptimized: true, // Necessário para output: 'export'
+    unoptimized: true,
   },
-  trailingSlash: true, // Adiciona / no final das URLs para compatibilidade com servidor estático
+  trailingSlash: true,
+  
+  // Configurações de produção
+  poweredByHeader: false,
+  generateEtags: true,
+  compress: true,
+  
+  // Configurações de cache
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
 };
 
 module.exports = nextConfig; 
