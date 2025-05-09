@@ -7,19 +7,16 @@ export const getApiUrl = (endpoint) => {
   // Se não houver endpoint, retornar apenas a URL base
   if (!endpoint) return window.API_BASE_URL;
   
-  // Limpar o endpoint removendo barras extras e prefixo api
-  endpoint = endpoint.trim()
-    .replace(/^\/+/, '')  // Remove leading slashes
-    .replace(/\/+$/, '')  // Remove trailing slashes
-    .replace(/^api\/+/, ''); // Remove api prefix if present
+  // Limpar o endpoint removendo barras extras
+  const cleanEndpoint = endpoint.replace(/^\/+/, '').replace(/^api\/+/, '');
   
-  // Em produção, usar a mesma URL base do site
+  // Usar o domínio correto baseado no ambiente
   const baseUrl = process.env.NODE_ENV === 'production'
     ? 'https://virtualradio.h4xd66.easypanel.host'
     : 'http://localhost:3000';
-  
+    
   // Construir a URL final
-  return `${baseUrl}/api/${endpoint}`;
+  return `${baseUrl}/api/${cleanEndpoint}`;
 };
 
 /**

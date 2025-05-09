@@ -10,17 +10,25 @@ const nextConfig = {
   
   // Configure Content Security Policy (CSP)
   async headers() {
-    const cspValue = process.env.NODE_ENV === 'production'
-      ? "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; connect-src 'self' https://virtualradio.h4xd66.easypanel.host https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob: data:;"
-      : "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; connect-src 'self' http://localhost:3000 https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob: data:;";
-
     return [
       {
-        source: '/(.*)',
+        source: '/:path*',
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: cspValue
+            value: `
+              default-src 'self';
+              script-src 'self' 'unsafe-eval' 'unsafe-inline';
+              connect-src 'self' http://localhost:3000 http://localhost:3001 https://virtualradio.h4xd66.easypanel.host https://fonts.googleapis.com https://fonts.gstatic.com;
+              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+              font-src 'self' https://fonts.gstatic.com;
+              img-src 'self' data: https:;
+              media-src 'self' https://virtualradio.h4xd66.easypanel.host;
+            `.replace(/\s{2,}/g, ' ').trim()
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
           }
         ]
       }
@@ -29,19 +37,20 @@ const nextConfig = {
   
   // Handle specific paths or extensions
   async rewrites() {
-    const apiBase = process.env.NODE_ENV === 'production'
+    const isProduction = process.env.NODE_ENV === 'production';
+    const apiBaseUrl = isProduction 
       ? 'https://virtualradio.h4xd66.easypanel.host'
       : 'http://localhost:3000';
-
+      
     return [
       {
         source: '/api/:path*',
-        destination: `${apiBase}/api/:path*`,
+        destination: `${apiBaseUrl}/api/:path*`
       },
       {
         source: '/uploads/:path*',
-        destination: `${apiBase}/uploads/:path*`,
-      },
+        destination: `${apiBaseUrl}/uploads/:path*`
+      }
     ];
   },
   

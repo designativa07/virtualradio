@@ -28,10 +28,12 @@ if (!process.env.DB_HOST) {
   process.env.DB_USER = 'desig938_myradio';
   process.env.DB_PASS = 'VirtualRadio123';
   process.env.DB_NAME = 'desig938_myradio';
-  process.env.PORT = '3000';
+  process.env.PORT = '3001';
   process.env.NODE_ENV = 'development';
   process.env.SESSION_SECRET = 'virtualradioappsecretkey';
-  process.env.CLIENT_URL = 'http://localhost:3001';
+  process.env.CLIENT_URL = process.env.NODE_ENV === 'production' 
+    ? 'https://virtualradio.h4xd66.easypanel.host'
+    : 'http://localhost:3000';
 }
 
 // Print environment variables (excluding sensitive data)
@@ -76,14 +78,14 @@ async function setupServer() {
   // Middleware
   const allowedOrigins = process.env.NODE_ENV === 'production'
     ? ['https://virtualradio.h4xd66.easypanel.host']
-    : ['http://localhost:3000'];
+    : ['http://localhost:3000', 'http://localhost:3001', 'https://virtualradio.h4xd66.easypanel.host'];
 
   app.use(cors({
     origin: function(origin, callback) {
       // Permitir requisições sem origin (como apps mobile ou Postman)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.indexOf(origin) !== -1) {
+      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
         callback(null, true);
       } else {
         console.warn(`Origin não permitida: ${origin}`);
@@ -92,7 +94,8 @@ async function setupServer() {
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true  // Importante: Permite envio de cookies em requisições CORS
+    credentials: true,  // Importante: Permite envio de cookies em requisições CORS
+    exposedHeaders: ['Authorization']  // Permite que o cliente leia o header Authorization
   }));
   
   // Aumentar o limite do body parser para arquivos grandes
