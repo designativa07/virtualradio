@@ -3,12 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-
-// Função para obter a URL base da API
-const getApiUrl = () => {
-  // Forçar uso do localhost:3000
-  return 'http://localhost:3000';
-};
+import { getApiUrl } from '../app/utils/api';
 
 export default function Navbar() {
   const router = useRouter();
@@ -28,7 +23,7 @@ export default function Navbar() {
           return;
         }
         
-        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
+        const response = await fetch(getApiUrl('auth/me'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }

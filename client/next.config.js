@@ -23,8 +23,14 @@ const nextConfig = {
               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
               font-src 'self' https://fonts.gstatic.com;
               img-src 'self' data: https:;
-              media-src 'self' https://virtualradio.h4xd66.easypanel.host;
+              media-src 'self' http://localhost:3001 https://virtualradio.h4xd66.easypanel.host blob:;
+              worker-src 'self' blob:;
+              manifest-src 'self';
             `.replace(/\s{2,}/g, ' ').trim()
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*'
           },
           {
             key: 'X-Frame-Options',
@@ -38,10 +44,15 @@ const nextConfig = {
   // Handle specific paths or extensions
   async rewrites() {
     const isProduction = process.env.NODE_ENV === 'production';
-    const apiBaseUrl = isProduction 
-      ? 'https://virtualradio.h4xd66.easypanel.host'
-      : 'http://localhost:3000';
-      
+    
+    if (isProduction) {
+      // Em produção, não precisamos de rewrites, pois estamos no mesmo domínio
+      return [];
+    }
+    
+    // Em desenvolvimento, redirecionamos para o backend local
+    const apiBaseUrl = 'http://localhost:3001';
+    
     return [
       {
         source: '/api/:path*',
@@ -50,6 +61,10 @@ const nextConfig = {
       {
         source: '/uploads/:path*',
         destination: `${apiBaseUrl}/uploads/:path*`
+      },
+      {
+        source: '/favicon.ico',
+        destination: `${apiBaseUrl}/favicon.ico`
       }
     ];
   },
@@ -57,8 +72,8 @@ const nextConfig = {
   // Configurações de ambiente
   env: {
     NEXT_PUBLIC_API_URL: process.env.NODE_ENV === 'production'
-      ? 'https://virtualradio.h4xd66.easypanel.host'
-      : 'http://localhost:3000',
+      ? '' // URL relativa em produção
+      : 'http://localhost:3001',
   },
 };
 

@@ -3,12 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-// Função para obter a URL base da API
-const getApiUrl = () => {
-  // Forçar uso do localhost:3000
-  return 'http://localhost:3000';
-};
+import { getApiUrl } from '../utils/api';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -29,7 +24,7 @@ export default function Dashboard() {
           return;
         }
         
-        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
+        const response = await fetch(getApiUrl('auth/me'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -64,7 +59,7 @@ export default function Dashboard() {
         return;
       }
       
-      const response = await fetch(`${getApiUrl()}/api/radio`, {
+      const response = await fetch(getApiUrl('radio'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }

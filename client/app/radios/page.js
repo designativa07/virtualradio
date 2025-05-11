@@ -7,8 +7,9 @@ import { fetchApi } from '../utils/api';
 
 // Function to get the API base URL
 const getApiUrl = () => {
-  // Forçar uso do localhost:3000
-  return 'http://localhost:3000';
+  // Use the hostname to determine the environment
+  const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
+  return isProduction ? window.location.origin : 'http://localhost:3001';
 };
 
 export default function RadiosPage() {

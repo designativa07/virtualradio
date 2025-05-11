@@ -1,7 +1,7 @@
 /**
  * Returns the base URL for API requests based on the current environment
  * In production, uses the same domain as the current page
- * In development, uses localhost:3000
+ * In development, uses localhost:3001
  */
 export const getApiUrl = (endpoint) => {
   // Se não houver endpoint, retornar apenas a URL base
@@ -11,9 +11,10 @@ export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.replace(/^\/+/, '').replace(/^api\/+/, '');
   
   // Usar o domínio correto baseado no ambiente
-  const baseUrl = process.env.NODE_ENV === 'production'
-    ? 'https://virtualradio.h4xd66.easypanel.host'
-    : 'http://localhost:3000';
+  const baseUrl = process.env.NODE_ENV === 'production' || 
+    (typeof window !== 'undefined' && window.location.hostname !== 'localhost')
+    ? (typeof window !== 'undefined' ? window.location.origin : 'https://virtualradio.h4xd66.easypanel.host')
+    : 'http://localhost:3001';
     
   // Construir a URL final
   return `${baseUrl}/api/${cleanEndpoint}`;

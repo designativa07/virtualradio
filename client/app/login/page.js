@@ -37,8 +37,8 @@ export default function Login() {
         
         try {
           // Tentativa via API
-          const fallbackUrl = `${getApiUrl()}/api/auth/login-fallback`;
-          console.log(`Tentando login fallback com email: ${email}`);
+          const fallbackUrl = getApiUrl('auth/login-fallback');
+          console.log(`Tentando login fallback com email: ${email} em ${fallbackUrl}`);
           
           const response = await fetch(fallbackUrl, {
             method: 'POST',
@@ -127,7 +127,7 @@ export default function Login() {
 
       try {
         // Se o fallback e o mock falhar, tenta o login normal (isso provavelmente vai falhar se os outros falharam)
-        const apiUrl = `${getApiUrl()}/api/auth/login`;
+        const apiUrl = getApiUrl('auth/login');
         console.log('Tentando login normal em:', apiUrl);
         
         const response = await fetch(apiUrl, {

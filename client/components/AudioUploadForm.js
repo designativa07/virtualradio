@@ -136,7 +136,7 @@ export default function AudioUploadForm({ radioId, onSuccess }) {
       <h2 className="text-xl font-semibold mb-4">Upload de Áudio</h2>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+        <div className="mb-4 p-3 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 rounded-md">
           {error}
         </div>
       )}
@@ -150,7 +150,7 @@ export default function AudioUploadForm({ radioId, onSuccess }) {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
+            className="w-full px-3 py-2 border rounded-md dark:bg-slate-700 dark:text-white dark:border-slate-600"
             placeholder="Nome do arquivo de áudio"
             required
           />
@@ -163,7 +163,7 @@ export default function AudioUploadForm({ radioId, onSuccess }) {
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
+            className="w-full px-3 py-2 border rounded-md dark:bg-slate-700 dark:text-white dark:border-slate-600"
             required
           >
             <option value="music">Música</option>
@@ -179,17 +179,17 @@ export default function AudioUploadForm({ radioId, onSuccess }) {
             type="file"
             accept="audio/*"
             onChange={(e) => setFile(e.target.files[0])}
-            className="w-full px-3 py-2 border rounded-md"
+            className="w-full px-3 py-2 border rounded-md dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:file:bg-slate-600 dark:file:text-white dark:file:border-slate-500"
             required
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Formatos aceitos: MP3, WAV, OGG (máx. 50MB)
           </p>
         </div>
         
         {isUploading && progress > 0 && (
           <div className="mt-4">
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary" 
                 style={{ width: `${progress}%` }}

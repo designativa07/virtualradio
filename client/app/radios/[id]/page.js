@@ -8,6 +8,31 @@ import AudioUploadForm from '../../../components/AudioUploadForm';
 import RadioPlayer from '../../../components/RadioPlayer';
 import { fetchApi } from '../../utils/api';
 
+// Função auxiliar para gerar URLs completas para áudios
+const getFullAudioUrl = (audioPath) => {
+  if (!audioPath) return '';
+  
+  // Se o caminho já é uma URL completa, retornar como está
+  if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
+    return audioPath;
+  }
+  
+  // Se o caminho começa com /api/, vamos usar a função do Next.js API Routes
+  if (audioPath.startsWith('/api/')) {
+    return audioPath; // O Next.js vai lidar com isso internamente
+  }
+  
+  // Remover a barra inicial se existir
+  const cleanPath = audioPath.startsWith('/') ? audioPath.substring(1) : audioPath;
+  
+  // Construir a URL base para o arquivo de áudio
+  const baseUrl = process.env.NODE_ENV === 'production'
+    ? 'https://virtualradio.h4xd66.easypanel.host'
+    : 'http://localhost:3001';
+    
+  return `${baseUrl}/${cleanPath}`;
+};
+
 export default function RadioDetail({ params }) {
   const router = useRouter();
   const [radioId, setRadioId] = useState(null);
@@ -116,6 +141,12 @@ export default function RadioDetail({ params }) {
   };
   
   const handleAudioSelect = (audio) => {
+    // Adiciona a URL completa ao objeto de áudio, se necessário
+    if (audio && audio.file_path && !audio.file_path.startsWith('http')) {
+      console.log(`Preparando áudio para reprodução: ${audio.title}`);
+      audio.full_url = getFullAudioUrl(audio.file_path);
+    }
+    
     setSelectedAudio(audio);
     setShowRadioPlayer(false); // Hide radio player when selecting individual audio
   };
@@ -249,90 +280,28 @@ export default function RadioDetail({ params }) {
       
       {showRadioPlayer && audioFiles.length > 0 && (
         <div className="mb-8">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Controles de Volume</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Duração do Fade Out (segundos)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={fadeOutDuration}
-                  onChange={(e) => setFadeOutDuration(Number(e.target.value))}
-                  className="w-full px-3 py-2 border rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Volume da Música de Fundo (0-1)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={backgroundVolume}
-                  onChange={(e) => setBackgroundVolume(Number(e.target.value))}
-                  className="w-full px-3 py-2 border rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Volume do Spot (0-1)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={spotVolume}
-                  onChange={(e) => setSpotVolume(Number(e.target.value))}
-                  className="w-full px-3 py-2 border rounded-md"
-                />
-              </div>
-            </div>
-            <RadioPlayer 
-              stationName={radio.name}
-              audioFiles={audioFiles}
-              autoplay={true}
-              fadeOutDuration={fadeOutDuration}
-              backgroundVolume={backgroundVolume}
-              spotVolume={spotVolume}
-            />
-          </div>
+          <RadioPlayer 
+            stationName={radio.name}
+            audioFiles={audioFiles}
+            autoplay={true}
+            fadeOutDuration={fadeOutDuration}
+            backgroundVolume={backgroundVolume}
+            spotVolume={spotVolume}
+          />
         </div>
       )}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-8">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-xl font-semibold">About this Radio</h2>
-                <p className="text-gray-600 dark:text-gray-300 mt-2">
-                  {radio.description || 'No description provided'}
-                </p>
-              </div>
-              {isAdmin() && (
-                <Link href={`/radios/${radioId}/edit`} className="text-primary hover:underline">
-                  Edit Radio
-                </Link>
-              )}
-            </div>
-            <div className="text-sm text-gray-500">
-              <p>Created: {new Date(radio.created_at).toLocaleDateString()}</p>
-              <p>Admin: {radio.admin_username}</p>
-            </div>
-          </div>
-          
           {selectedAudio && !showRadioPlayer && (
             <div className="mb-8">
               <AudioPlayer 
-                audioSrc={selectedAudio.file_path ? `/${selectedAudio.file_path}` : `/api/audio/stream/${selectedAudio.id}`}
-                title={selectedAudio.title}
+                audioSrc={
+                  selectedAudio.file_path 
+                    ? getFullAudioUrl(selectedAudio.file_path) 
+                    : `/api/audio/stream/${selectedAudio.id}`
+                }
+                title={selectedAudio.title || 'Áudio sem título'}
               />
             </div>
           )}
@@ -415,6 +384,26 @@ export default function RadioDetail({ params }) {
         {isAdmin() && (
           <div>
             <AudioUploadForm radioId={radioId} onSuccess={fetchAudioFiles} />
+            
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mt-8">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold">About this Radio</h2>
+                  <p className="text-gray-600 dark:text-gray-300 mt-2">
+                    {radio.description || 'No description provided'}
+                  </p>
+                </div>
+                {isAdmin() && (
+                  <Link href={`/radios/${radioId}/edit`} className="text-primary hover:underline">
+                    Edit Radio
+                  </Link>
+                )}
+              </div>
+              <div className="text-sm text-gray-500">
+                <p>Created: {new Date(radio.created_at).toLocaleDateString()}</p>
+                <p>Admin: {radio.admin_username}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>

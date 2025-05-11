@@ -3,6 +3,31 @@
 import { useState, useEffect, useRef } from 'react';
 import { Howl } from 'howler';
 
+// Função auxiliar para gerar URLs completas para áudios
+const getFullAudioUrl = (audioPath) => {
+  if (!audioPath) return '';
+  
+  // Se o caminho já é uma URL completa, retornar como está
+  if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
+    return audioPath;
+  }
+  
+  // Se o caminho começa com /api/, vamos usar a função do Next.js API Routes
+  if (audioPath.startsWith('/api/')) {
+    return audioPath; // O Next.js vai lidar com isso internamente
+  }
+  
+  // Remover a barra inicial se existir
+  const cleanPath = audioPath.startsWith('/') ? audioPath.substring(1) : audioPath;
+  
+  // Construir a URL base para o arquivo de áudio
+  const baseUrl = process.env.NODE_ENV === 'production'
+    ? 'https://virtualradio.h4xd66.easypanel.host'
+    : 'http://localhost:3001';
+    
+  return `${baseUrl}/${cleanPath}`;
+};
+
 export default function AudioPlayer({ audioSrc, title }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -22,13 +47,24 @@ export default function AudioPlayer({ audioSrc, title }) {
       soundRef.current.unload();
     }
     
+    // Obter a URL completa
+    const fullAudioUrl = getFullAudioUrl(audioSrc);
+    console.log("Loading audio from URL:", fullAudioUrl);
+    
     // Create new sound
     const sound = new Howl({
-      src: [audioSrc],
+      src: [fullAudioUrl],
       html5: true, // Use HTML5 Audio
       volume: volume,
       onload: () => {
+        console.log("Audio loaded successfully");
         setDuration(sound.duration());
+      },
+      onloaderror: (id, error) => {
+        console.error("Error loading audio:", error);
+      },
+      onplayerror: (id, error) => {
+        console.error("Error playing audio:", error);
       },
       onend: () => {
         setIsPlaying(false);

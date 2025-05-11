@@ -19,7 +19,7 @@ export function middleware(request) {
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' blob: data:;
       media-src 'self' blob:;
-      connect-src 'self' http://localhost:3000 https://fonts.googleapis.com https://fonts.gstatic.com;
+      connect-src 'self' http://localhost:3000 http://localhost:3001 https://virtualradio.h4xd66.easypanel.host https://fonts.googleapis.com https://fonts.gstatic.com;
     `.replace(/\s{2,}/g, ' ').trim()
   );
 

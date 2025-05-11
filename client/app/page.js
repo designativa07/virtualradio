@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-
-// Função para obter a URL base da API
-const getApiUrl = () => {
-  // Forçar uso do localhost:3000
-  return 'http://localhost:3000';
-};
+import { getApiUrl } from './utils/api';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -25,7 +20,7 @@ export default function Home() {
           return;
         }
         
-        const response = await fetch(`${getApiUrl()}/api/auth/me`, {
+        const response = await fetch(getApiUrl('auth/me'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
