@@ -33,7 +33,7 @@ if (!process.env.DB_HOST) {
   process.env.SESSION_SECRET = 'virtualradioappsecretkey';
   process.env.CLIENT_URL = process.env.NODE_ENV === 'production' 
     ? 'https://virtualradio.h4xd66.easypanel.host'
-    : 'http://localhost:3000';
+    : 'http://localhost:3001';
 }
 
 // Print environment variables (excluding sensitive data)
@@ -128,8 +128,23 @@ async function setupServer() {
     console.log('Created uploads directory');
   }
 
-  // Servir uploads
-  app.use('/uploads', express.static(uploadsDir));
+  // Servir uploads com CORS headers
+  app.use('/uploads', (req, res, next) => {
+    // Add CORS headers specifically for media files
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    
+    // Handle OPTIONS requests
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    
+    // Log access to media files
+    console.log(`Serving media file: ${req.path}`);
+    
+    next();
+  }, express.static(uploadsDir));
 
   // Serve favicon directly to prevent 500 errors
   app.get('/favicon.ico', (req, res) => {
@@ -433,5 +448,5 @@ DATABASE: ${process.env.DB_NAME || 'não definido'}
 setupServer().catch(err => {
   console.error('Erro fatal ao iniciar o servidor:', err);
   // Don't exit process immediately to allow logs to be written
-  setTimeout(() => process.exit(1), 3000);
+  setTimeout(() => process.exit(1), 3001);
 }); 

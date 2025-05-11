@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Audio Test</title>
+</head>
+<body>
+    <h1>CORS Audio Test</h1>
+    
+    <h2>Audio with crossOrigin attribute</h2>
+    <audio id="corsAudio" controls crossOrigin="anonymous">
+        <source src="http://localhost:3001/uploads/5/1746920857583_time-for-healing-by-sakura-hz.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <button id="testButton">Load Audio with JavaScript</button>
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('testButton').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            try {
+                // Create new audio element with CORS attributes
+                const audio = new Audio();
+                audio.crossOrigin = 'anonymous';
+                audio.controls = true;
+                audio.src = 'http://localhost:3001/uploads/5/1746920857583_time-for-healing-by-sakura-hz.mp3';
+                
+                // Add event listeners
+                audio.addEventListener('canplaythrough', () => {
+                    resultDiv.textContent = 'Audio loaded successfully!';
+                });
+                
+                audio.addEventListener('error', (e) => {
+                    resultDiv.textContent = `Error loading audio: ${e.target.error?.message || 'Unknown error'}`;
+                });
+                
+                // Append to document
+                resultDiv.appendChild(audio);
+                
+                // Try to load
+                audio.load();
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html> 

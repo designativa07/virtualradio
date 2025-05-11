@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Proxy</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
+        button { padding: 8px 16px; background: #0070f3; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0051a8; }
+        input { width: 100%; padding: 8px; margin-bottom: 10px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>VirtualRadio Media Proxy</h1>
+    <div class="container">
+        <h2>Load Audio File</h2>
+        <input type="text" id="audioUrl" value="http://localhost:3001/uploads/5/1746920857583_time-for-healing-by-sakura-hz.mp3" placeholder="Enter audio URL">
+        <button id="loadButton">Load Audio</button>
+        <div id="playerContainer" style="margin-top: 20px;"></div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        document.getElementById('loadButton').addEventListener('click', async () => {
+            const urlInput = document.getElementById('audioUrl');
+            const statusDiv = document.getElementById('status');
+            const playerContainer = document.getElementById('playerContainer');
+            playerContainer.innerHTML = '';
+            statusDiv.innerHTML = 'Loading...';
+            statusDiv.className = '';
+            
+            try {
+                // Fetch the audio file with appropriate CORS headers
+                const response = await fetch(urlInput.value, {
+                    mode: 'cors',
+                    headers: {
+                        'Origin': window.location.origin
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load audio: ${response.status} ${response.statusText}`);
+                }
+                
+                // Convert to blob and create object URL
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                // Create audio element
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.style.width = '100%';
+                
+                // Create source element
+                const source = document.createElement('source');
+                source.src = blobUrl;
+                source.type = 'audio/mpeg';
+                
+                // Add error handler
+                audio.onerror = (e) => {
+                    statusDiv.innerHTML = `Error playing audio: ${e.target.error?.message || 'Unknown error'}`;
+                    statusDiv.className = 'error';
+                };
+                
+                // Add success handler
+                audio.oncanplaythrough = () => {
+                    statusDiv.innerHTML = 'Audio loaded successfully! You can play it now.';
+                    statusDiv.className = 'success';
+                };
+                
+                // Assemble and append to page
+                audio.appendChild(source);
+                playerContainer.appendChild(audio);
+                
+                // Set info message
+                statusDiv.innerHTML = 'Audio loaded and converted to blob URL to bypass CSP restrictions';
+                statusDiv.className = 'success';
+                
+            } catch (error) {
+                statusDiv.innerHTML = `Error: ${error.message}`;
+                statusDiv.className = 'error';
+                console.error('Audio loading error:', error);
+            }
+        });
+    </script>
+</body>
+</html> 

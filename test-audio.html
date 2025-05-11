@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Test</title>
+</head>
+<body>
+    <h1>Audio File Test</h1>
+    <p>Testing direct access to audio file from backend</p>
+    
+    <h2>Direct Audio Element</h2>
+    <audio controls>
+        <source src="http://localhost:3001/uploads/5/1746920857583_time-for-healing-by-sakura-hz.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <h2>Fetch API Test</h2>
+    <button id="testFetch">Test Fetch API</button>
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('testFetch').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            try {
+                const response = await fetch('http://localhost:3001/uploads/5/1746920857583_time-for-healing-by-sakura-hz.mp3');
+                if (response.ok) {
+                    resultDiv.textContent = `Fetch successful: ${response.status} ${response.statusText}`;
+                    // Create blob URL and audio element
+                    const blob = await response.blob();
+                    const audioUrl = URL.createObjectURL(blob);
+                    const audio = new Audio(audioUrl);
+                    audio.controls = true;
+                    resultDiv.appendChild(audio);
+                } else {
+                    resultDiv.textContent = `Fetch failed: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html> 
